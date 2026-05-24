@@ -20,11 +20,16 @@ export type ChartBar = {
   volume: number | null;
 };
 
+type ChartProps = {
+  bars: ChartBar[];
+  onSelectBar?: (bar: ChartBar) => void;
+};
+
 function formatPrice(value: number) {
   return value.toFixed(2);
 }
 
-export function Chart({ bars }: { bars: ChartBar[] }) {
+export function Chart({ bars, onSelectBar }: ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const [hoveredBar, setHoveredBar] = useState<ChartBar | null>(bars[0] ?? null);
@@ -83,15 +88,28 @@ export function Chart({ bars }: { bars: ChartBar[] }) {
       }
     }
 
+    function handleClick(param: MouseEventParams) {
+      if (typeof param.time !== "number") {
+        return;
+      }
+
+      const bar = barsByTime.get(param.time);
+      if (bar) {
+        onSelectBar?.(bar);
+      }
+    }
+
     chart.subscribeCrosshairMove(handleCrosshairMove);
+    chart.subscribeClick(handleClick);
     chart.timeScale().fitContent();
 
     return () => {
       chart.unsubscribeCrosshairMove(handleCrosshairMove);
+      chart.unsubscribeClick(handleClick);
       chart.remove();
       chartRef.current = null;
     };
-  }, [bars, barsByTime]);
+  }, [bars, barsByTime, onSelectBar]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">

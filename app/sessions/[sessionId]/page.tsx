@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 
-import { Chart, type ChartBar } from "@/components/chart/Chart";
+import type { ChartBar } from "@/components/chart/Chart";
+import { SelectableChart } from "@/components/chart/SelectableChart";
+import { BarSelectionPanel } from "@/components/label-panel/BarSelectionPanel";
 import { ensureLocalEsRthData } from "@/lib/data/local-es";
 import { listBarsForSession } from "@/lib/repo/bars";
 import { getAdjacentSessions, getSession } from "@/lib/repo/sessions";
@@ -88,17 +90,12 @@ export default async function SessionPage({ params }: PageProps) {
           </div>
         </header>
         <div className="min-h-0 flex-1">
-          <Chart bars={bars} />
+          <SelectableChart bars={bars} />
         </div>
       </section>
 
       <aside className="min-h-0 border-l border-zinc-900 bg-zinc-950 p-5">
-        <div className="space-y-2">
-          <h2 className="text-sm font-medium text-zinc-100">Label Panel</h2>
-          <p className="text-sm text-zinc-500">
-            Bar selection and label forms are next on the roadmap.
-          </p>
-        </div>
+        <BarSelectionPanel bars={bars} />
       </aside>
     </main>
   );

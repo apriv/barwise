@@ -51,8 +51,8 @@
 - [ ] `lib/repo/dictionary.ts`：读取 active bar label 字典
 - [ ] `lib/repo/labels.ts`：`bar_labels` CRUD
 - [ ] `lib/actions/label.ts`：`upsertBarLabel`、`deleteBarLabel`
-- [ ] 图表点击选择 bar
-- [ ] 选中状态同步到 URL：`?bar=23`
+- [x] 图表点击选择 bar
+- [x] 选中状态同步到 URL：`?bar=23`
 - [ ] 右侧 `<BarLabelForm>`：展示 `bar_quality` / `bar_role` + note
 - [ ] 保存后刷新页面数据
 - [ ] 已标注 bar 在图表上显示一个简单 dot
