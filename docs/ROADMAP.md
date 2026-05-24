@@ -139,6 +139,8 @@
 - [ ] bar label：bar 上方 dot / badge
 - [ ] segment label：横向 band / line
 - [ ] context label：bar 下方 marker 或侧栏摘要
+- [ ] 图表上下文：每个 RTH session 额外显示前一天 RTH 最后一根、后一天 RTH 第一根
+- [ ] bar 编号提示：每 2–3 根 K 线在下方显示低调小号 bar_number
 - [ ] 处理重叠标注的显示优先级
 - [ ] 选中 bar / range 时高亮对应标注
 - [ ] hover 标注时显示 label summary
