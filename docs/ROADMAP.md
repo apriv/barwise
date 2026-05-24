@@ -40,7 +40,7 @@
 - [x] `lib/import/csv-parse.ts`：用 papaparse 解析、校验、规范化 ← M1-C1
 - [x] `lib/import/session-build.ts`：按 RTH/ETH 切 session、生成 bar_number ← M1-C1
 - [x] `lib/repo/sessions.ts`、`lib/repo/bars.ts`：CRUD ← M1-C1
-- [ ] `lib/actions/import.ts`：Server Action，事务性写入
+- [x] `lib/actions/import.ts`：Server Action，事务性写入 ← M1-C2
 - [ ] `/import` 页面：拖拽上传 → 预览 → 校验 → 确认（四步向导）
 - [ ] `/sessions` 列表页：日期降序、显示 bar 数和已标注计数
 - [ ] `/sessions/[sessionId]` 页面：
