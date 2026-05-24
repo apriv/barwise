@@ -1,6 +1,6 @@
 # Roadmap
 
-目标先做一个自己每天能用的标注工具：打开本地 ES 5m 数据，只看 RTH，每天一张图，先能给单根 K 线打简单标签；之后再完善标签体系、多 K 标注和导出格式。
+目标先做一个自己每天能用的标注工具：打开本地 ES 5m 数据，只看 RTH，每天一张图，先能给单根 K 线打标签；之后再完善标签体系、多 K/context 标注，以及图上的标注显示。
 
 不追求产品化，不做上传向导，不做多用户，不做复杂管理后台。
 
@@ -36,14 +36,14 @@
 
 ---
 
-## M2 — Simple Bar Labels（下一步）
+## M2 — Bar Labels（下一步）
 
-**目标：** 点一根 K 线，选择一个或几个简单标签，保存。此阶段不追求最终标签体系，先把标注动作跑通。
+**目标：** 点一根 K 线，选择 `bar_quality` / `bar_role` 标签，保存到 `bar_labels`。此阶段不设计新标签，只把单根 bar 标注动作跑通。
 
 ### 范围
 - 只标单根 bar
-- 只做简单标签，不做标签组设计
-- 标签可以先用少量固定选项或字典里的 `bar_quality` / `bar_role`
+- 只使用 `LABEL_DICTIONARY.md` 里的 `bar_quality` / `bar_role`
+- 每个 field 单选，可不填
 - 允许 note
 - 保存到 `bar_labels`
 
@@ -53,13 +53,14 @@
 - [ ] `lib/actions/label.ts`：`upsertBarLabel`、`deleteBarLabel`
 - [ ] 图表点击选择 bar
 - [ ] 选中状态同步到 URL：`?bar=23`
-- [ ] 右侧简单 `<BarLabelForm>`：展示可选标签 + note
+- [ ] 右侧 `<BarLabelForm>`：展示 `bar_quality` / `bar_role` + note
 - [ ] 保存后刷新页面数据
 - [ ] 已标注 bar 在图表上显示一个简单 dot
 - [ ] 键盘：`←/→` 切 bar，`Esc` 取消
 
 ### 不做
 - 标签体系重构
+- 临时固定标签
 - 标签组管理
 - segment labels
 - context labels
@@ -67,7 +68,7 @@
 - 导出格式设计
 
 ### 验收
-- 点击 bar 后右栏出现简单标签选择
+- 点击 bar 后右栏出现 `bar_quality` / `bar_role` 选择
 - 点选标签后 SQLite 里查得到
 - 刷新页面后已选标签仍然回填
 - 已标注 bar 有视觉标记
@@ -75,37 +76,37 @@
 
 ---
 
-## M3 — Label & Data Format Design
+## M3 — Label Design
 
-**目标：** 根据 `LABEL_DICTIONARY.md` 正式完善标签设计、标签组、数据格式和导出契约。M3 主要是设计和少量数据层调整，为 M4 的完整标注做准备。
+**目标：** 根据 `LABEL_DICTIONARY.md` 简洁但明确地定稿 Bar / Segment / Context 三类标签的字段、UI 分组、note 归属、颜色规则和数据格式，为 M4/M5 开发做准备。
 
 ### 设计内容
-- [ ] 明确 Bar Label 的字段、显示分组、颜色和快捷顺序
-- [ ] 明确 Segment Label 的字段：`segment_kind`、`direction`、note
-- [ ] 明确 Context Label 的字段：`market_context`、`trend_direction`、`current_location`、`current_event`、`trade_quality`、interpretation note
-- [ ] 明确每种标签在 UI 中是单选、多选还是自由文本
-- [ ] 明确标签颜色规则：bar dot、segment band、context marker
-- [ ] 明确 JSONL 导出 schema
-- [ ] 明确 CSV/备份是否需要做，若不做则写入未来列表
+- [ ] Bar：确认 `bar_quality` / `bar_role` 的显示分组、顺序、颜色
+- [ ] Segment：确认 `segment_kind`、`direction`、note 的 UI 和数据含义
+- [ ] Context：确认 `market_context`、`trend_direction`、`current_location`、`current_event`、`trade_quality`、interpretation note 的 UI 和数据含义
+- [ ] 明确每个 field 是单选、note，还是独立自由文本
+- [ ] 明确 note 归属：field 级 note、bar 级 note、segment note、context interpretation
+- [ ] 明确 M5 显示规则：bar dot / badge、segment band / line、context marker / summary
 - [ ] 检查当前 SQLite schema 是否够用，不够再写 migration
-- [ ] 更新 `LABEL_DICTIONARY.md`、`DATA_MODEL.md`、`IMPORT_EXPORT.md`、`UI_DESIGN.md`
+- [ ] 更新 `LABEL_DICTIONARY.md`、`DATA_MODEL.md`、`UI_DESIGN.md`
 
 ### 不做
 - 复杂字典管理页面
+- JSON/JSONL 导出
 - NLP / 自动标注
 - 多用户数据权限
 
 ### 验收
 - 标签字段、key、label、说明统一
 - UI 如何显示每类标签说清楚
-- 导出 JSONL 能表达 bar / segment / context
-- M4 可以按文档直接开发，不再临时想字段
+- note 归属和数据写入位置说清楚
+- M4/M5 可以按文档直接开发，不再临时想字段和显示规则
 
 ---
 
 ## M4 — Segment & Context Labels
 
-**目标：** 支持多 K 范围标注、segment label、context label，并把标注结果清楚显示在图上。
+**目标：** 支持多 K 范围标注、segment label、context label。此阶段只负责标注数据的选择、保存、回填、修改和删除，不做复杂图上显示。
 
 ### 任务
 - [ ] 图表支持拖动选择 bar range
@@ -113,29 +114,52 @@
 - [ ] 多根 range 支持 Segment 表单
 - [ ] `lib/repo/labels.ts` 增加 segment/context CRUD
 - [ ] `lib/actions/label.ts` 增加 segment/context actions
-- [ ] 图上显示：
-  - bar labels：bar 上方 dot / badge
-  - segment labels：横向 band / line
-  - context labels：bar 下方 marker 或侧栏摘要
 - [ ] 右侧 panel 根据选择类型切换：
   - 单 bar：Bar / Context
   - range：Segment
 - [ ] 已有标注可回填、修改、删除
-- [ ] JSONL 导出包含 bar / segment / context
+
+### 不做
+- 图上复杂显示
+- JSON/JSONL 导出
 
 ### 验收
 - 拖动选择多根 K 线后能保存 segment label
 - 单根 bar 能同时保存 bar labels 和 context labels
-- 图上能看出哪些 bar / segment 已标注
-- 导出的 JSONL 能表达完整标注
+- 已有 segment/context 能回填、修改、删除
+- 切换 bar 或 range 不丢已保存数据
+
+---
+
+## M5 — Label Visualization
+
+**目标：** 把已标注内容清楚显示在图上，让复盘时一眼看出哪些 bar、segment、context 已标注。
+
+### 任务
+- [ ] bar label：bar 上方 dot / badge
+- [ ] segment label：横向 band / line
+- [ ] context label：bar 下方 marker 或侧栏摘要
+- [ ] 处理重叠标注的显示优先级
+- [ ] 选中 bar / range 时高亮对应标注
+- [ ] hover 标注时显示 label summary
+
+### 不做
+- 新增标注数据类型
+- JSON/JSONL 导出
+
+### 验收
+- 图上能看出哪些 bar 已标注
+- 图上能看出 segment 覆盖范围
+- context marker 不遮挡 K 线主体
+- 选中和 hover 状态清楚
 
 ---
 
 ## V1 完成定义
 
-M1–M4 完成后就是 V1：
+M1–M5 完成后就是 V1：
 
-> 打开本地 ES 5m RTH 数据，标注单根 bar、segment、context，并导出 JSONL。
+> 打开本地 ES 5m RTH 数据，标注单根 bar、segment、context，并在图上清楚看到标注结果。
 
 ---
 
@@ -144,6 +168,7 @@ M1–M4 完成后就是 V1：
 - ETH / DAY / RTH 视图切换
 - 上传任意 CSV
 - 字典编辑 UI
+- JSON/JSONL 导出
 - CSV zip
 - 回放模式
 - 相似 case 检索
