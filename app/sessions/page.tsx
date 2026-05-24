@@ -23,7 +23,7 @@ export default function SessionsPage() {
               Sessions
             </h1>
             <p className="text-sm text-zinc-400">
-              Imported ES sessions, newest first.
+              ES daily chart sessions from local CSV data.
             </p>
           </div>
           <Link

@@ -7,7 +7,7 @@ import {
   unixSecondsToZonedParts,
 } from "@/lib/import/time";
 
-export type SessionType = "RTH" | "ETH";
+export type SessionType = "DAY" | "RTH" | "ETH";
 
 export type SessionBar = ParsedBar & {
   barNumber: number;
@@ -33,7 +33,7 @@ export type SessionBuildResult = {
 };
 
 const buildOptionsSchema = z.object({
-  sessionType: z.enum(["RTH", "ETH"]).default("RTH"),
+  sessionType: z.enum(["DAY", "RTH", "ETH"]).default("DAY"),
   marketTimezone: z.string().min(1).default("America/Chicago"),
 });
 
@@ -49,6 +49,10 @@ function sessionDateForBar(
   const parts = unixSecondsToZonedParts(bar.ts, marketTimezone);
   const localDate = formatDate(parts);
   const minute = minutesAfterMidnight(parts.hour, parts.minute);
+
+  if (sessionType === "DAY") {
+    return localDate;
+  }
 
   if (sessionType === "RTH") {
     const rthOpen = 8 * 60 + 30;

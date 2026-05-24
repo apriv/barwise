@@ -1,6 +1,6 @@
 "use server";
 
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { revalidatePath } from "next/cache";
@@ -32,6 +32,7 @@ type ImportCsvInput = {
   instrumentSymbol?: string;
   sourceTimezone?: string;
   sessionType?: SessionType;
+  backupSource?: boolean;
 };
 
 const importCsvInputSchema = z.object({
@@ -39,14 +40,17 @@ const importCsvInputSchema = z.object({
   fileName: z.string().min(1),
   instrumentSymbol: z.string().min(1).default("ES"),
   sourceTimezone: z.string().min(1).default("America/Chicago"),
-  sessionType: z.enum(["RTH", "ETH"]).default("RTH"),
+  sessionType: z.enum(["DAY", "RTH", "ETH"]).default("DAY"),
+  backupSource: z.boolean().default(false),
 });
 
 const importFormSchema = z.object({
   sourceTimezone: z.string().min(1).default("America/Chicago"),
-  sessionType: z.enum(["RTH", "ETH"]).default("RTH"),
+  sessionType: z.enum(["DAY", "RTH", "ETH"]).default("DAY"),
   instrumentSymbol: z.string().min(1).default("ES"),
 });
+
+const LOCAL_ES_CSV = path.join(process.cwd(), "data", "samples", "es_5m.csv");
 
 function safeFileName(fileName: string) {
   return fileName.replace(/[^a-zA-Z0-9._-]+/g, "_");
@@ -86,7 +90,9 @@ export async function importCsvText(
     throw new Error("No bars matched the selected session hours.");
   }
 
-  await backupCsv(options.csv, options.fileName);
+  if (options.backupSource) {
+    await backupCsv(options.csv, options.fileName);
+  }
 
   const db = getDb();
   const summary = db.transaction(() => {
@@ -132,6 +138,19 @@ export async function importCsvText(
   return summary;
 }
 
+export async function syncLocalEsCsv() {
+  const csv = await readFile(LOCAL_ES_CSV, "utf8");
+
+  return importCsvText({
+    csv,
+    fileName: path.relative(process.cwd(), LOCAL_ES_CSV),
+    instrumentSymbol: "ES",
+    sourceTimezone: "America/Chicago",
+    sessionType: "DAY",
+    backupSource: false,
+  });
+}
+
 export async function importCsvAction(formData: FormData) {
   const file = formData.get("file");
   if (!(file instanceof File)) {
@@ -147,6 +166,7 @@ export async function importCsvAction(formData: FormData) {
   return importCsvText({
     csv: await file.text(),
     fileName: file.name,
+    backupSource: true,
     ...options,
   });
 }

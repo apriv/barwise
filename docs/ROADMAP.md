@@ -34,24 +34,24 @@
 
 ## M1 — Import & Display（导入 + 显示图表）
 
-**目标：** 导一个 CSV 进来，能在标注页看到 K 线图。
+**目标：** 从本地 `data/samples/es_5m.csv` 同步数据，按一天一个 session 在标注页看到 K 线图。
 
 ### 任务
 - [x] `lib/import/csv-parse.ts`：用 papaparse 解析、校验、规范化 ← M1-C1
-- [x] `lib/import/session-build.ts`：按 RTH/ETH 切 session、生成 bar_number ← M1-C1
+- [x] `lib/import/session-build.ts`：按 DAY/RTH/ETH 切 session、生成 bar_number ← M1-C1
 - [x] `lib/repo/sessions.ts`、`lib/repo/bars.ts`：CRUD ← M1-C1
 - [x] `lib/actions/import.ts`：Server Action，事务性写入 ← M1-C2
-- [ ] `/import` 页面：拖拽上传 → 预览 → 校验 → 确认（四步向导）
+- [x] `/import` 页面：从本地 `data/samples/es_5m.csv` 同步 → 按一天切 session ← M1-C4
 - [x] `/sessions` 列表页：日期降序、显示 bar 数和已标注计数 ← M1-C3
-- [ ] `/sessions/[sessionId]` 页面：
+- [x] `/sessions/[sessionId]` 页面：
   - Server Component 取 session + bars
   - 传给 `<Chart>` Client Component
   - `<Chart>` 用 lightweight-charts 渲染 OHLC
 - [ ] 顶部 prev/next session 切换 + 日期选择
-- [ ] Top nav 高亮当前页
+- [x] Top nav 高亮当前页 ← M0-C1
 
 ### 验收
-- 拿一个真实的 ES 5min CSV 测试，全部正确切 session
+- 拿本地 `data/samples/es_5m.csv` 测试，全部正确按天切 session
 - 同一文件重复导入，跳过已有 bar，不报错
 - 标注页打开任意 session，K 线正常显示、能缩放、能 hover 看 OHLC
 - 切换 prev/next session 不丢状态、不慢

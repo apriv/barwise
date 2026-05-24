@@ -37,14 +37,14 @@ CREATE TABLE instruments (
 
 ### `sessions`
 
-一个交易日一行。ES 的 session 切分默认按**美东时间 RTH 09:30–16:00**（即 CT 08:30–15:00）切；用户可在导入向导切换为"全天 24h"（CME 电子盘 17:00 前夜 → 16:00 当日）。具体见 [`IMPORT_EXPORT.md`](./IMPORT_EXPORT.md)。
+一个交易日一行。V1 当前默认从本地 `data/samples/es_5m.csv` 读取数据，并按 `America/Chicago` 本地日期切成 `DAY` session；之后需要时可再切 RTH / ETH 视图。具体见 [`IMPORT_EXPORT.md`](./IMPORT_EXPORT.md)。
 
 ```sql
 CREATE TABLE sessions (
   id            INTEGER PRIMARY KEY,
   instrument_id INTEGER NOT NULL REFERENCES instruments(id),
   session_date  TEXT NOT NULL,             -- 'YYYY-MM-DD'（local trading date）
-  session_type  TEXT NOT NULL,             -- 'RTH' | 'ETH'
+  session_type  TEXT NOT NULL,             -- 'DAY' | 'RTH' | 'ETH'
   start_ts      INTEGER NOT NULL,          -- Unix sec, UTC, 第一根 bar 的开盘
   end_ts        INTEGER NOT NULL,          -- 最后一根 bar 的开盘
   bar_count     INTEGER NOT NULL,
