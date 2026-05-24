@@ -24,6 +24,10 @@ export type SessionRecord = {
   source_file: string | null;
 };
 
+export type SessionListItem = SessionRecord & {
+  labeled_bar_count: number;
+};
+
 type UpsertSessionInput = BuiltSession & {
   instrumentId: number;
   sourceFile?: string | null;
@@ -68,6 +72,37 @@ export function listSessions(db?: Database) {
     `,
     )
     .all() as SessionRecord[];
+}
+
+export function listSessionsWithStats(db?: Database) {
+  return database(db)
+    .prepare(
+      `
+      SELECT
+        sessions.id,
+        sessions.instrument_id,
+        sessions.session_date,
+        sessions.session_type,
+        sessions.start_ts,
+        sessions.end_ts,
+        sessions.bar_count,
+        sessions.imported_at,
+        sessions.source_file,
+        COUNT(DISTINCT labeled_bars.bar_id) AS labeled_bar_count
+      FROM sessions
+      LEFT JOIN (
+        SELECT bar_id FROM bar_labels
+        UNION
+        SELECT bar_id FROM context_labels
+      ) AS labeled_bars
+        ON labeled_bars.bar_id IN (
+          SELECT id FROM bars WHERE bars.session_id = sessions.id
+        )
+      GROUP BY sessions.id
+      ORDER BY sessions.session_date DESC, sessions.session_type ASC
+    `,
+    )
+    .all() as SessionListItem[];
 }
 
 export function getSession(id: number, db?: Database) {
