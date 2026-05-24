@@ -4,11 +4,15 @@ import { useSearchParams } from "next/navigation";
 import { useMemo } from "react";
 
 import type { ChartBar } from "@/components/chart/Chart";
+import { upsertBarLabel } from "@/lib/actions/label";
 import type { LabelDictionaryItem } from "@/lib/repo/dictionary";
+import type { BarLabelRecord } from "@/lib/repo/labels";
 
 type BarSelectionPanelProps = {
   bars: ChartBar[];
+  labels: BarLabelRecord[];
   labelOptions: LabelDictionaryItem[];
+  sessionId: number;
 };
 
 function formatPrice(value: number) {
@@ -37,7 +41,9 @@ function groupOptions(options: LabelDictionaryItem[]) {
 
 export function BarSelectionPanel({
   bars,
+  labels,
   labelOptions,
+  sessionId,
 }: BarSelectionPanelProps) {
   const searchParams = useSearchParams();
   const selectedBarNumber = Number(searchParams.get("bar"));
@@ -53,6 +59,16 @@ export function BarSelectionPanel({
     () => groupOptions(labelOptions),
     [labelOptions],
   );
+  const labelsByBarId = useMemo(() => {
+    return labels.reduce<Record<number, Record<string, BarLabelRecord>>>(
+      (groups, label) => {
+        groups[label.bar_id] ??= {};
+        groups[label.bar_id][label.field] = label;
+        return groups;
+      },
+      {},
+    );
+  }, [labels]);
 
   if (!selectedBar) {
     return (
@@ -93,10 +109,6 @@ export function BarSelectionPanel({
         </div>
       </dl>
 
-      <div className="rounded border border-dashed border-zinc-800 p-3 text-sm text-zinc-500">
-        Label saving comes next.
-      </div>
-
       <div className="space-y-5">
         {Object.entries(optionsByField).map(([field, options]) => (
           <fieldset key={field} className="space-y-2">
@@ -105,27 +117,45 @@ export function BarSelectionPanel({
             </legend>
             <div className="grid gap-2">
               {options.map((option) => (
-                <label
+                <form
                   key={option.id}
-                  className="flex cursor-not-allowed items-start gap-3 rounded border border-zinc-800 bg-zinc-900/30 p-3 text-sm text-zinc-300"
-                  title={option.description ?? undefined}
+                  action={upsertBarLabel}
                 >
+                  <input type="hidden" name="sessionId" value={sessionId} />
+                  <input type="hidden" name="barId" value={selectedBar.id} />
+                  <input type="hidden" name="field" value={field} />
+                  <input type="hidden" name="value" value={option.key} />
                   <input
-                    type="radio"
-                    name={field}
-                    value={option.key}
-                    disabled
-                    className="mt-1"
+                    type="hidden"
+                    name="note"
+                    value={labelsByBarId[selectedBar.id]?.[field]?.note ?? ""}
                   />
-                  <span>
-                    <span className="block font-medium text-zinc-100">
-                      {option.label}
+                  <input
+                    aria-label={`${labelForField(field)} ${option.label}`}
+                    checked={
+                      labelsByBarId[selectedBar.id]?.[field]?.value ===
+                      option.key
+                    }
+                    className="peer sr-only"
+                    readOnly
+                    type="radio"
+                  />
+                  <button
+                    className="flex w-full items-start gap-3 rounded border border-zinc-800 bg-zinc-900/30 p-3 text-left text-sm text-zinc-300 hover:border-zinc-600 hover:bg-zinc-900 peer-checked:border-emerald-500/70 peer-checked:bg-emerald-500/10"
+                    title={option.description ?? undefined}
+                    type="submit"
+                  >
+                    <span className="mt-1 h-2.5 w-2.5 rounded-full border border-zinc-600 peer-checked:border-emerald-400 peer-checked:bg-emerald-400" />
+                    <span>
+                      <span className="block font-medium text-zinc-100">
+                        {option.label}
+                      </span>
+                      <span className="block font-mono text-xs text-zinc-500">
+                        {option.key}
+                      </span>
                     </span>
-                    <span className="block font-mono text-xs text-zinc-500">
-                      {option.key}
-                    </span>
-                  </span>
-                </label>
+                  </button>
+                </form>
               ))}
             </div>
           </fieldset>
@@ -136,8 +166,13 @@ export function BarSelectionPanel({
             Note
           </span>
           <textarea
-            disabled
+            readOnly
             rows={3}
+            value={
+              Object.values(labelsByBarId[selectedBar.id] ?? {}).find(
+                (label) => label.note,
+              )?.note ?? ""
+            }
             placeholder="Note saving comes next."
             className="w-full resize-none rounded border border-zinc-800 bg-zinc-900/30 px-3 py-2 text-sm text-zinc-400 placeholder:text-zinc-600"
           />
