@@ -48,12 +48,12 @@
 - 保存到 `bar_labels`
 
 ### 任务
-- [ ] `lib/repo/dictionary.ts`：读取 active bar label 字典
+- [x] `lib/repo/dictionary.ts`：读取 active bar label 字典
 - [ ] `lib/repo/labels.ts`：`bar_labels` CRUD
 - [ ] `lib/actions/label.ts`：`upsertBarLabel`、`deleteBarLabel`
 - [x] 图表点击选择 bar
 - [x] 选中状态同步到 URL：`?bar=23`
-- [ ] 右侧 `<BarLabelForm>`：展示 `bar_quality` / `bar_role` + note
+- [x] 右侧 `<BarLabelForm>`：展示 `bar_quality` / `bar_role` + note
 - [ ] 保存后刷新页面数据
 - [ ] 已标注 bar 在图表上显示一个简单 dot
 - [ ] 键盘：`←/→` 切 bar，`Esc` 取消
