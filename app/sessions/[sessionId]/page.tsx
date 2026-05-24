@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 
 import { Chart, type ChartBar } from "@/components/chart/Chart";
-import { ensureDatabase } from "@/lib/db/ensure";
+import { ensureLocalEsRthData } from "@/lib/data/local-es";
 import { listBarsForSession } from "@/lib/repo/bars";
 import { getSession } from "@/lib/repo/sessions";
 
@@ -13,7 +14,8 @@ type PageProps = {
 };
 
 export default async function SessionPage({ params }: PageProps) {
-  ensureDatabase();
+  await connection();
+  await ensureLocalEsRthData();
 
   const { sessionId } = await params;
   const id = Number(sessionId);
@@ -22,7 +24,7 @@ export default async function SessionPage({ params }: PageProps) {
     notFound();
   }
 
-  const session = getSession(id);
+  const session = getSession(id, { sessionType: "RTH" });
   if (!session) {
     notFound();
   }

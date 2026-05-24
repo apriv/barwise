@@ -154,7 +154,7 @@ function validateIntervals(bars: ParsedBar[]) {
     if (delta === 0) {
       warnings.push({
         row: current.sourceRow,
-        message: "Duplicate timestamp; import will skip an existing bar.",
+        message: "Duplicate timestamp; existing bars will be skipped.",
       });
       continue;
     }

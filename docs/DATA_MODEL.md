@@ -37,7 +37,7 @@ CREATE TABLE instruments (
 
 ### `sessions`
 
-一个交易日一行。V1 当前默认从本地 `data/samples/es_5m.csv` 读取数据，并按 `America/Chicago` 本地日期切成 `DAY` session；之后需要时可再切 RTH / ETH 视图。具体见 [`IMPORT_EXPORT.md`](./IMPORT_EXPORT.md)。
+一个交易日一行。V1 当前默认从本地 `data/samples/es_5m.csv` 读取数据，并只切 `RTH` session；之后需要时可再加 ETH / DAY 视图。具体见 [`IMPORT_EXPORT.md`](./IMPORT_EXPORT.md)。
 
 ```sql
 CREATE TABLE sessions (

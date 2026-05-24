@@ -74,8 +74,15 @@ export function listSessions(db?: Database) {
     .all() as SessionRecord[];
 }
 
-export function listSessionsWithStats(db?: Database) {
-  return database(db)
+export function listSessionsWithStats(options?: {
+  sessionType?: SessionType;
+  db?: Database;
+}) {
+  const conn = database(options?.db);
+  const where = options?.sessionType ? "WHERE sessions.session_type = ?" : "";
+  const params = options?.sessionType ? [options.sessionType] : [];
+
+  return conn
     .prepare(
       `
       SELECT
@@ -98,15 +105,25 @@ export function listSessionsWithStats(db?: Database) {
         ON labeled_bars.bar_id IN (
           SELECT id FROM bars WHERE bars.session_id = sessions.id
         )
+      ${where}
       GROUP BY sessions.id
       ORDER BY sessions.session_date DESC, sessions.session_type ASC
     `,
     )
-    .all() as SessionListItem[];
+    .all(...params) as SessionListItem[];
 }
 
-export function getSession(id: number, db?: Database) {
-  return database(db)
+export function getSession(
+  id: number,
+  options?: {
+    sessionType?: SessionType;
+    db?: Database;
+  },
+) {
+  const where = options?.sessionType ? "AND session_type = ?" : "";
+  const params = options?.sessionType ? [id, options.sessionType] : [id];
+
+  return database(options?.db)
     .prepare(
       `
       SELECT
@@ -121,9 +138,10 @@ export function getSession(id: number, db?: Database) {
         source_file
       FROM sessions
       WHERE id = ?
+        ${where}
     `,
     )
-    .get(id) as SessionRecord | undefined;
+    .get(...params) as SessionRecord | undefined;
 }
 
 export function upsertSession(input: UpsertSessionInput, db?: Database) {

@@ -1,6 +1,7 @@
 import Link from "next/link";
+import { connection } from "next/server";
 
-import { ensureDatabase } from "@/lib/db/ensure";
+import { ensureLocalEsRthData } from "@/lib/data/local-es";
 import { listSessionsWithStats } from "@/lib/repo/sessions";
 
 function formatDateTime(unixSeconds: number) {
@@ -10,9 +11,10 @@ function formatDateTime(unixSeconds: number) {
   }).format(new Date(unixSeconds * 1000));
 }
 
-export default function SessionsPage() {
-  ensureDatabase();
-  const sessions = listSessionsWithStats();
+export default async function SessionsPage() {
+  await connection();
+  await ensureLocalEsRthData();
+  const sessions = listSessionsWithStats({ sessionType: "RTH" });
 
   return (
     <main className="flex flex-1 justify-center px-6 py-10">
@@ -23,15 +25,9 @@ export default function SessionsPage() {
               Sessions
             </h1>
             <p className="text-sm text-zinc-400">
-              ES daily chart sessions from local CSV data.
+              ES RTH sessions from data/samples/es_5m.csv.
             </p>
           </div>
-          <Link
-            href="/import"
-            className="rounded bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-white"
-          >
-            Import
-          </Link>
         </div>
 
         <div className="overflow-hidden rounded border border-zinc-800">
@@ -42,7 +38,7 @@ export default function SessionsPage() {
                 <th className="px-4 py-3 font-medium">Type</th>
                 <th className="px-4 py-3 text-right font-medium">Bars</th>
                 <th className="px-4 py-3 text-right font-medium">Labeled</th>
-                <th className="px-4 py-3 font-medium">Imported</th>
+                <th className="px-4 py-3 font-medium">Loaded</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800">
@@ -73,7 +69,7 @@ export default function SessionsPage() {
               {sessions.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-4 py-10 text-center text-zinc-500">
-                    No sessions imported yet.
+                    No RTH sessions found in the local CSV.
                   </td>
                 </tr>
               ) : null}

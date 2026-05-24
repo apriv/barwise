@@ -33,7 +33,7 @@ export type SessionBuildResult = {
 };
 
 const buildOptionsSchema = z.object({
-  sessionType: z.enum(["DAY", "RTH", "ETH"]).default("DAY"),
+  sessionType: z.enum(["DAY", "RTH", "ETH"]).default("RTH"),
   marketTimezone: z.string().min(1).default("America/Chicago"),
 });
 
