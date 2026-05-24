@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 
 import type { ChartBar } from "@/components/chart/Chart";
+import { BarKeyboardNav } from "@/components/chart/BarKeyboardNav";
 import { SelectableChart } from "@/components/chart/SelectableChart";
 import { BarSelectionPanel } from "@/components/label-panel/BarSelectionPanel";
 import { ensureLocalEsRthData } from "@/lib/data/local-es";
@@ -106,6 +107,12 @@ export default async function SessionPage({ params }: PageProps) {
           sessionId={session.id}
         />
       </aside>
+      {bars.length > 0 ? (
+        <BarKeyboardNav
+          minBarNumber={bars[0].barNumber}
+          maxBarNumber={bars[bars.length - 1].barNumber}
+        />
+      ) : null}
     </main>
   );
 }

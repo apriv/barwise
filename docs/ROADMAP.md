@@ -36,7 +36,7 @@
 
 ---
 
-## M2 — Bar Labels（下一步）
+## M2 — Bar Labels（已完成）
 
 **目标：** 点一根 K 线，选择 `bar_quality` / `bar_role` 标签，保存到 `bar_labels`。此阶段不设计新标签，只把单根 bar 标注动作跑通。
 
@@ -55,8 +55,11 @@
 - [x] 选中状态同步到 URL：`?bar=23`
 - [x] 右侧 `<BarLabelForm>`：展示 `bar_quality` / `bar_role` + note
 - [x] 保存后刷新页面数据
-- [ ] 已标注 bar 在图表上显示一个简单 dot
-- [ ] 键盘：`←/→` 切 bar，`Esc` 取消
+- [x] 即点即存 + toggle 取消（再次点击同一选项 → 删除）
+- [x] 键盘：`←/→` 切 bar，`Esc` 取消
+
+### 推迟
+- **已标注 bar 在图表上显示 dot** → 推到 M5，和 segment band / context marker 一起做颜色和优先级统一设计
 
 ### 不做
 - 标签体系重构
@@ -136,7 +139,7 @@
 **目标：** 把已标注内容清楚显示在图上，让复盘时一眼看出哪些 bar、segment、context 已标注。
 
 ### 任务
-- [ ] bar label：bar 上方 dot / badge
+- [ ] bar label：bar 上方 dot / badge（M2 推迟而来，与 segment / context 一起设计颜色与优先级）
 - [ ] segment label：横向 band / line
 - [ ] context label：bar 下方 marker 或侧栏摘要
 - [ ] 图表上下文：每个 RTH session 额外显示前一天 RTH 最后一根、后一天 RTH 第一根
