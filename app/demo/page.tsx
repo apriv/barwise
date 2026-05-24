@@ -24,7 +24,7 @@ export default async function DemoPage() {
           {last ? fmt(last.time) : "—"}
         </div>
       </div>
-      <div className="flex-1 overflow-hidden">
+      <div className="min-h-0 flex-1">
         <EsChart candles={candles} />
       </div>
     </>
