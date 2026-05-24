@@ -5,7 +5,7 @@ import { connection } from "next/server";
 import { Chart, type ChartBar } from "@/components/chart/Chart";
 import { ensureLocalEsRthData } from "@/lib/data/local-es";
 import { listBarsForSession } from "@/lib/repo/bars";
-import { getSession } from "@/lib/repo/sessions";
+import { getAdjacentSessions, getSession } from "@/lib/repo/sessions";
 
 type PageProps = {
   params: Promise<{
@@ -28,6 +28,7 @@ export default async function SessionPage({ params }: PageProps) {
   if (!session) {
     notFound();
   }
+  const { previous, next } = getAdjacentSessions(session);
 
   const bars: ChartBar[] = listBarsForSession(session.id).map((bar) => ({
     id: bar.id,
@@ -53,12 +54,38 @@ export default async function SessionPage({ params }: PageProps) {
               {session.source_file ? ` from ${session.source_file}` : ""}
             </p>
           </div>
-          <Link
-            href="/sessions"
-            className="rounded border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100"
-          >
-            Sessions
-          </Link>
+          <div className="flex items-center gap-2">
+            {previous ? (
+              <Link
+                href={`/sessions/${previous.id}`}
+                className="rounded border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100"
+              >
+                Prev
+              </Link>
+            ) : (
+              <span className="rounded border border-zinc-800 px-3 py-1.5 text-sm text-zinc-600">
+                Prev
+              </span>
+            )}
+            {next ? (
+              <Link
+                href={`/sessions/${next.id}`}
+                className="rounded border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100"
+              >
+                Next
+              </Link>
+            ) : (
+              <span className="rounded border border-zinc-800 px-3 py-1.5 text-sm text-zinc-600">
+                Next
+              </span>
+            )}
+            <Link
+              href="/sessions"
+              className="rounded border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100"
+            >
+              Sessions
+            </Link>
+          </div>
         </header>
         <div className="min-h-0 flex-1">
           <Chart bars={bars} />

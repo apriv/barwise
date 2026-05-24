@@ -144,6 +144,43 @@ export function getSession(
     .get(...params) as SessionRecord | undefined;
 }
 
+export function getAdjacentSessions(
+  session: Pick<SessionRecord, "session_date" | "session_type">,
+  db?: Database,
+) {
+  const conn = database(db);
+  const select = `
+    SELECT
+      id,
+      instrument_id,
+      session_date,
+      session_type,
+      start_ts,
+      end_ts,
+      bar_count,
+      imported_at,
+      source_file
+    FROM sessions
+    WHERE session_type = ?
+      AND session_date {operator} ?
+    ORDER BY session_date {direction}
+    LIMIT 1
+  `;
+
+  const previous = conn
+    .prepare(select.replace("{operator}", "<").replace("{direction}", "DESC"))
+    .get(session.session_type, session.session_date) as
+    | SessionRecord
+    | undefined;
+  const next = conn
+    .prepare(select.replace("{operator}", ">").replace("{direction}", "ASC"))
+    .get(session.session_type, session.session_date) as
+    | SessionRecord
+    | undefined;
+
+  return { previous, next };
+}
+
 export function upsertSession(input: UpsertSessionInput, db?: Database) {
   const conn = database(db);
   const now = unixNow();

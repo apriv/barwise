@@ -21,7 +21,7 @@
 
 ---
 
-## M1 — RTH Chart（当前）
+## M1 — RTH Chart（已完成）
 
 **目标：** 直接读取 `data/samples/es_5m.csv`，只显示 ES RTH，每个交易日一张图。
 
@@ -32,7 +32,7 @@
 - [x] `lib/repo/sessions.ts`、`lib/repo/bars.ts`：读取 session 和 bars
 - [x] `/sessions`：列出 RTH sessions，日期降序
 - [x] `/sessions/[sessionId]`：显示当天 RTH K 线图
-- [ ] 顶部 prev / next day 切换
+- [x] 顶部 prev / next day 切换
 
 ### 不做
 - 上传 CSV
