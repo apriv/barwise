@@ -11,16 +11,16 @@
 **目标：** 数据库 + 一个能跑起来的 Next.js 16 骨架。
 
 ### 任务
-- [ ] 装依赖：`better-sqlite3`、`zod`（输入校验）、`papaparse`（CSV 解析）（`lightweight-charts` 已装于预热 demo）
-- [ ] 建目录：`lib/db/`、`lib/repo/`、`lib/import/`、`lib/export/`、`lib/actions/`、`components/label-panel/`（`components/chart/`、`components/ui/` 已建）
-- [ ] `lib/db/client.ts`：`better-sqlite3` 单例 + WAL/foreign_keys PRAGMA
-- [ ] `lib/db/migrate.ts`：启动时跑迁移
-- [ ] `lib/db/migrations/001_init.sql`：所有表（见 `DATA_MODEL.md`）
-- [ ] `lib/db/seed-dictionary.ts`：把 `LABEL_DICTIONARY.md` 里的初始字典写库
+- [x] 装依赖：`better-sqlite3`、`zod`（输入校验）、`papaparse`（CSV 解析）（`lightweight-charts` 已装于预热 demo）← M0-C2
+- [x] 建目录：`lib/db/`、`lib/repo/`、`lib/import/`、`lib/export/`、`lib/actions/`、`components/label-panel/`（`components/chart/`、`components/ui/` 已建）← M0-C2
+- [x] `lib/db/client.ts`：`better-sqlite3` 单例 + WAL/foreign_keys PRAGMA ← M0-C2
+- [x] `lib/db/migrate.ts`：启动时跑迁移 ← M0-C2
+- [x] `lib/db/migrations/001_init.sql`：所有表（见 `DATA_MODEL.md`）← M0-C2
+- [x] `lib/db/seed-dictionary.ts`：把 `LABEL_DICTIONARY.md` 里的初始字典写库 ← M0-C3
 - [x] `data/` 加 `.gitignore`（提交于 init docs/plot；`/data/samples/` 例外入 git）
 - [x] Top nav layout（`app/layout.tsx`），暗色主题 ← M0-C1
 - [x] 首页占位（指向 Sessions 和 Import）← M0-C1
-- [ ] `.claude/settings.local.json` 允许 `npm run dev`、`npm install` 等
+- [x] `.claude/settings.local.json` 允许 `npm run dev`、`npm install` 等
 
 ### 验收
 - `npm run dev` 启动后，访问首页能看到 nav
@@ -190,4 +190,4 @@ M0–M4 全部 done = V1 发布。
 - [x] 设计文档（本目录）
 - [x] 数据获取脚本（`scripts/fetch_es.py` via yfinance, 60d ES=F 5min）
 - [x] Demo K 线渲染（lightweight-charts v5，`/demo`）
-- [ ] M0 基建（C1 ✅ nav + landing；C2 ⏳ SQLite；C3 ⏳ dictionary seed）
+- [x] M0 基建（C1 ✅ nav + landing；C2 ✅ SQLite；C3 ✅ dictionary seed）
