@@ -1,6 +1,6 @@
 # Input & Export
 
-V1 数据格式契约。输入是本地 CSV，导出只做 JSONL。
+V1 数据格式契约。输入是本地 CSV，导出优先 JSONL。
 
 ---
 
@@ -79,7 +79,7 @@ RTH × 5min = 78 根/天。
 
 ## Export: JSONL（训练用）
 
-每行一个 JSON 对象，**一根 bar 一行**，附带它的 bar labels。这是 V1 唯一导出格式。
+M2 只需要导出 bar labels。M3 会正式完善 JSONL schema，M4 再把 segment/context 加进去。
 
 ### 文件：`barwise_export_<YYYYMMDD_HHMMSS>.jsonl`
 
@@ -97,12 +97,16 @@ RTH × 5min = 78 根/天。
   "bar_labels": {
     "bar_quality": "strong_bull_bar",
     "bar_role": "follow_through_bar"
-  }
+  },
+
+  "context_labels": {},
+  "segments": []
 }
 ```
 
 **规则：**
-- `bar_labels` 是 `{ field: value }` 扁平字典。
+- `bar_labels` / `context_labels` 是 `{ field: value }` 扁平字典。
+- `segments` 是数组。
 - field 没标就不出现该 key，不输出 `null` 占位。
 - 时间戳是 Unix epoch 秒（UTC）。
 - 所有 `value` 是字典里的英文 `key`，方便 ML pipeline 处理。
@@ -110,7 +114,8 @@ RTH × 5min = 78 根/天。
 ### 导出选项
 
 - V1 只导出 RTH
-- 默认只导出有 bar label 的 bar
+- M2 默认只导出有 bar label 的 bar
+- M4 支持导出 bar / segment / context
 
 ---
 

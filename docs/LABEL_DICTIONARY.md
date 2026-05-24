@@ -150,9 +150,9 @@ category=context:
 
 ---
 
-## 生命周期（字典管理 UI）
+## 生命周期（未来字典管理 UI）
 
-V1 提供一个 `/labels/dictionary` 页面：
+M2 不做字典管理 UI。M3 先完善标签体系设计；如果后续需要编辑字典，再提供 `/labels/dictionary` 页面：
 
 - 按 (category, field) 分组列出
 - 行内可编辑 `label`、`description`、`sort_order`
