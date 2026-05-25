@@ -25,8 +25,30 @@ export type ContextTagRecord = {
   updated_at: number;
 };
 
+export type SegmentTagRecord = {
+  id: number;
+  session_id: number;
+  start_bar_id: number;
+  start_bar_number: number;
+  end_bar_id: number;
+  end_bar_number: number;
+  tag_key: string;
+  tag_label: string;
+  note: string | null;
+  created_at: number;
+  updated_at: number;
+};
+
 export type UpsertBarTagInput = {
   barId: number;
+  tagKey: string;
+  note?: string | null;
+};
+
+export type UpsertSegmentTagInput = {
+  sessionId: number;
+  startBarId: number;
+  endBarId: number;
   tagKey: string;
   note?: string | null;
 };
@@ -150,6 +172,79 @@ export function deleteContextTag(barId: number, tagKey: string, db?: Database) {
   database(db)
     .prepare("DELETE FROM context_tags WHERE bar_id = ? AND tag_key = ?")
     .run(barId, tagKey);
+}
+
+export function listSegmentTagsForSession(sessionId: number, db?: Database) {
+  return database(db)
+    .prepare(
+      `
+      SELECT
+        segment_tags.id,
+        segment_tags.session_id,
+        segment_tags.start_bar_id,
+        start_bars.bar_number AS start_bar_number,
+        segment_tags.end_bar_id,
+        end_bars.bar_number AS end_bar_number,
+        segment_tags.tag_key,
+        label_dictionary.label AS tag_label,
+        segment_tags.note,
+        segment_tags.created_at,
+        segment_tags.updated_at
+      FROM segment_tags
+      INNER JOIN bars AS start_bars ON start_bars.id = segment_tags.start_bar_id
+      INNER JOIN bars AS end_bars ON end_bars.id = segment_tags.end_bar_id
+      INNER JOIN label_dictionary
+        ON label_dictionary.category = 'segment'
+        AND label_dictionary.key = segment_tags.tag_key
+      WHERE segment_tags.session_id = ?
+      ORDER BY start_bars.bar_number ASC, end_bars.bar_number ASC, segment_tags.tag_key ASC
+    `,
+    )
+    .all(sessionId) as SegmentTagRecord[];
+}
+
+export function upsertSegmentTag(input: UpsertSegmentTagInput, db?: Database) {
+  const now = unixNow();
+
+  database(db)
+    .prepare(
+      `
+      INSERT INTO segment_tags (
+        session_id,
+        start_bar_id,
+        end_bar_id,
+        tag_key,
+        note,
+        created_at,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT (start_bar_id, end_bar_id, tag_key) DO UPDATE SET
+        note = excluded.note,
+        updated_at = excluded.updated_at
+    `,
+    )
+    .run(
+      input.sessionId,
+      input.startBarId,
+      input.endBarId,
+      input.tagKey,
+      input.note ?? null,
+      now,
+      now,
+    );
+}
+
+export function deleteSegmentTag(
+  startBarId: number,
+  endBarId: number,
+  tagKey: string,
+  db?: Database,
+) {
+  database(db)
+    .prepare(
+      "DELETE FROM segment_tags WHERE start_bar_id = ? AND end_bar_id = ? AND tag_key = ?",
+    )
+    .run(startBarId, endBarId, tagKey);
 }
 
 // Deprecated: Old bar_labels functions (kept for reference during M3 transition)

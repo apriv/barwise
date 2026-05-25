@@ -8,8 +8,10 @@ import { getDb } from "@/lib/db/client";
 import {
   deleteBarTag as deleteBarTagRecord,
   deleteContextTag as deleteContextTagRecord,
+  deleteSegmentTag as deleteSegmentTagRecord,
   upsertBarTag as upsertBarTagRecord,
   upsertContextTag as upsertContextTagRecord,
+  upsertSegmentTag as upsertSegmentTagRecord,
 } from "@/lib/repo/labels";
 
 const tagActionSchema = z.object({
@@ -18,7 +20,17 @@ const tagActionSchema = z.object({
   tagKey: z.string().min(1),
 });
 
-function assertValidTag(category: "bar" | "context", tagKey: string) {
+const segmentTagActionSchema = z.object({
+  sessionId: z.coerce.number().int().positive(),
+  startBarId: z.coerce.number().int().positive(),
+  endBarId: z.coerce.number().int().positive(),
+  tagKey: z.string().min(1),
+});
+
+function assertValidTag(
+  category: "bar" | "context" | "segment",
+  tagKey: string,
+) {
   const row = getDb()
     .prepare(
       `
@@ -99,5 +111,41 @@ export async function deleteContextTag(formData: FormData) {
   });
 
   deleteContextTagRecord(input.barId, input.tagKey);
+  revalidatePath(`/sessions/${input.sessionId}`);
+}
+
+export async function upsertSegmentTag(formData: FormData) {
+  ensureDatabase();
+
+  const input = segmentTagActionSchema.parse({
+    sessionId: formData.get("sessionId"),
+    startBarId: formData.get("startBarId"),
+    endBarId: formData.get("endBarId"),
+    tagKey: formData.get("tagKey"),
+  });
+
+  assertValidTag("segment", input.tagKey);
+
+  upsertSegmentTagRecord({
+    sessionId: input.sessionId,
+    startBarId: input.startBarId,
+    endBarId: input.endBarId,
+    tagKey: input.tagKey,
+  });
+
+  revalidatePath(`/sessions/${input.sessionId}`);
+}
+
+export async function deleteSegmentTag(formData: FormData) {
+  ensureDatabase();
+
+  const input = segmentTagActionSchema.parse({
+    sessionId: formData.get("sessionId"),
+    startBarId: formData.get("startBarId"),
+    endBarId: formData.get("endBarId"),
+    tagKey: formData.get("tagKey"),
+  });
+
+  deleteSegmentTagRecord(input.startBarId, input.endBarId, input.tagKey);
   revalidatePath(`/sessions/${input.sessionId}`);
 }

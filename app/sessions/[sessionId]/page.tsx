@@ -12,6 +12,7 @@ import { listActiveDictionaryItems } from "@/lib/repo/dictionary";
 import {
   listBarTagsForSession,
   listContextTagsForSession,
+  listSegmentTagsForSession,
 } from "@/lib/repo/labels";
 import { getAdjacentSessions, getSession } from "@/lib/repo/sessions";
 
@@ -50,8 +51,10 @@ export default async function SessionPage({ params }: PageProps) {
   }));
   const barLabelOptions = listActiveDictionaryItems("bar");
   const contextLabelOptions = listActiveDictionaryItems("context");
+  const segmentLabelOptions = listActiveDictionaryItems("segment");
   const barTags = listBarTagsForSession(session.id);
   const contextTags = listContextTagsForSession(session.id);
+  const segmentTags = listSegmentTagsForSession(session.id);
 
   return (
     <main className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_360px]">
@@ -109,8 +112,10 @@ export default async function SessionPage({ params }: PageProps) {
           bars={bars}
           barTags={barTags}
           contextTags={contextTags}
+          segmentTags={segmentTags}
           barTagOptions={barLabelOptions}
           contextTagOptions={contextLabelOptions}
+          segmentTagOptions={segmentLabelOptions}
           sessionId={session.id}
         />
       </aside>

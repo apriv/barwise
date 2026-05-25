@@ -128,14 +128,14 @@
 ### 任务
 - [x] 图表支持选择 bar range：普通点击选 bar，Shift-click 选择 range
 - [x] 单根 bar 支持 Bar / Context 两组多 tag 表单
-- [ ] 多根 range 支持 Segment 多 tag 表单
-- [ ] `lib/repo/labels.ts` 增加 segment_tags CRUD
+- [x] 多根 range 支持 Segment 多 tag 表单
+- [x] `lib/repo/labels.ts` 增加 segment_tags CRUD
 - [x] `lib/repo/labels.ts` 增加 context_tags CRUD
-- [ ] `lib/actions/label.ts` 增加 segment actions
+- [x] `lib/actions/label.ts` 增加 segment actions
 - [x] `lib/actions/label.ts` 增加 context actions
 - [ ] 右侧 panel 根据选择类型切换：
-  - 单 bar：Bar / Context
-  - range：Segment
+  - [x] 单 bar：Bar / Context
+  - [x] range：Segment
   - 同时优化UI tag选择有大分类和小选项，更容易选择，而不是全都连在一起
 - [x] Bar tag 选择 UI：按大类分组，使用紧凑小选项，并提供即时选中反馈
 - [ ] 已有标注可回填、修改、删除

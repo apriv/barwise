@@ -7,21 +7,30 @@ import type { ChartBar } from "@/components/chart/Chart";
 import {
   deleteBarTag,
   deleteContextTag,
+  deleteSegmentTag,
   upsertBarTag,
   upsertContextTag,
+  upsertSegmentTag,
 } from "@/lib/actions/label";
 import type { LabelDictionaryItem } from "@/lib/repo/dictionary";
-import type { BarTagRecord, ContextTagRecord } from "@/lib/repo/labels";
+import type {
+  BarTagRecord,
+  ContextTagRecord,
+  SegmentTagRecord,
+} from "@/lib/repo/labels";
 
 type BarSelectionPanelProps = {
   bars: ChartBar[];
   barTags: BarTagRecord[];
   contextTags: ContextTagRecord[];
+  segmentTags: SegmentTagRecord[];
   barTagOptions: LabelDictionaryItem[];
   contextTagOptions: LabelDictionaryItem[];
+  segmentTagOptions: LabelDictionaryItem[];
   sessionId: number;
 };
 
+type FormFields = Record<string, number | string>;
 type ToggleAction = (formData: FormData) => Promise<void>;
 
 function formatPrice(value: number) {
@@ -44,6 +53,7 @@ const groupLabels: Record<string, string> = {
   current_location: "Current Location",
   current_event: "Current Event",
   trade_quality: "Trade Quality",
+  segment_kind: "Segment Kind",
 };
 
 function formatGroupName(groupName: string) {
@@ -53,16 +63,14 @@ function formatGroupName(groupName: string) {
 function TagGroup({
   groupName,
   options,
-  sessionId,
-  barId,
+  formFields,
   selectedTags,
   upsertAction,
   deleteAction,
 }: {
   groupName: string;
   options: LabelDictionaryItem[];
-  sessionId: number;
-  barId: number;
+  formFields: FormFields;
   selectedTags: Set<string>;
   upsertAction: ToggleAction;
   deleteAction: ToggleAction;
@@ -94,8 +102,9 @@ function TagGroup({
       toggleOptimisticTag(tagKey);
 
       const formData = new FormData();
-      formData.set("sessionId", String(sessionId));
-      formData.set("barId", String(barId));
+      Object.entries(formFields).forEach(([key, value]) => {
+        formData.set(key, String(value));
+      });
 
       try {
         if (isSelected) {
@@ -152,17 +161,46 @@ export function BarSelectionPanel({
   bars,
   barTags,
   contextTags,
+  segmentTags,
   barTagOptions,
   contextTagOptions,
+  segmentTagOptions,
   sessionId,
 }: BarSelectionPanelProps) {
   const searchParams = useSearchParams();
   const selectedBarNumber = Number(searchParams.get("bar"));
+  const rangeStartNumber = Number(searchParams.get("rangeStart"));
+  const rangeEndNumber = Number(searchParams.get("rangeEnd"));
 
   const selectedBar = useMemo(() => {
     if (!Number.isInteger(selectedBarNumber)) return null;
     return bars.find((bar) => bar.barNumber === selectedBarNumber) ?? null;
   }, [bars, selectedBarNumber]);
+
+  const selectedRange = useMemo(() => {
+    if (
+      !Number.isInteger(rangeStartNumber) ||
+      !Number.isInteger(rangeEndNumber)
+    ) {
+      return null;
+    }
+
+    const startNumber = Math.min(rangeStartNumber, rangeEndNumber);
+    const endNumber = Math.max(rangeStartNumber, rangeEndNumber);
+    const startBar =
+      bars.find((bar) => bar.barNumber === startNumber) ?? null;
+    const endBar = bars.find((bar) => bar.barNumber === endNumber) ?? null;
+
+    if (!startBar || !endBar) return null;
+
+    return {
+      startNumber,
+      endNumber,
+      startBar,
+      endBar,
+      count: endNumber - startNumber + 1,
+    };
+  }, [bars, rangeEndNumber, rangeStartNumber]);
 
   const barOptionsByGroup = useMemo(
     () => groupOptions(barTagOptions),
@@ -172,6 +210,11 @@ export function BarSelectionPanel({
   const contextOptionsByGroup = useMemo(
     () => groupOptions(contextTagOptions),
     [contextTagOptions],
+  );
+
+  const segmentOptionsByGroup = useMemo(
+    () => groupOptions(segmentTagOptions),
+    [segmentTagOptions],
   );
 
   const selectedBarTagsSet = useMemo(() => {
@@ -191,6 +234,57 @@ export function BarSelectionPanel({
         .map((tag) => tag.tag_key),
     );
   }, [contextTags, selectedBar]);
+
+  const selectedSegmentTagsSet = useMemo(() => {
+    if (!selectedRange) return new Set<string>();
+    return new Set(
+      segmentTags
+        .filter(
+          (tag) =>
+            tag.start_bar_id === selectedRange.startBar.id &&
+            tag.end_bar_id === selectedRange.endBar.id,
+        )
+        .map((tag) => tag.tag_key),
+    );
+  }, [segmentTags, selectedRange]);
+
+  if (selectedRange) {
+    const segmentFormFields = {
+      sessionId,
+      startBarId: selectedRange.startBar.id,
+      endBarId: selectedRange.endBar.id,
+    };
+
+    return (
+      <div className="space-y-5">
+        <div className="space-y-1">
+          <h2 className="text-sm font-medium text-zinc-100">
+            Range #{selectedRange.startNumber}-{selectedRange.endNumber}
+          </h2>
+          <p className="text-xs text-zinc-500">
+            {selectedRange.count} bars selected
+          </p>
+        </div>
+
+        <section className="space-y-3">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            Segment Tags
+          </h3>
+          {Object.entries(segmentOptionsByGroup).map(([groupName, options]) => (
+            <TagGroup
+              key={`${selectedRange.startBar.id}:${selectedRange.endBar.id}:segment:${groupName}`}
+              groupName={groupName}
+              options={options}
+              formFields={segmentFormFields}
+              selectedTags={selectedSegmentTagsSet}
+              upsertAction={upsertSegmentTag}
+              deleteAction={deleteSegmentTag}
+            />
+          ))}
+        </section>
+      </div>
+    );
+  }
 
   if (!selectedBar) {
     return (
@@ -239,8 +333,7 @@ export function BarSelectionPanel({
               key={`${selectedBar.id}:bar:${groupName}`}
               groupName={groupName}
               options={options}
-              sessionId={sessionId}
-              barId={selectedBar.id}
+              formFields={{ sessionId, barId: selectedBar.id }}
               selectedTags={selectedBarTagsSet}
               upsertAction={upsertBarTag}
               deleteAction={deleteBarTag}
@@ -257,8 +350,7 @@ export function BarSelectionPanel({
               key={`${selectedBar.id}:context:${groupName}`}
               groupName={groupName}
               options={options}
-              sessionId={sessionId}
-              barId={selectedBar.id}
+              formFields={{ sessionId, barId: selectedBar.id }}
               selectedTags={selectedContextTagsSet}
               upsertAction={upsertContextTag}
               deleteAction={deleteContextTag}
