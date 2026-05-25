@@ -164,7 +164,7 @@
   - 允许深色/浅色模式切换 
   - [x] 下拉时保持 K 线图不变，只滚动 bar tags 选择。
   - [x] 允许每组 bar tag 收起
-  - 右侧默认收起OHLC, 有个按钮可以展开。这个看得比较少 
+  - [x] 右侧默认收起 OHLC，有个按钮可以展开。这个看得比较少
 - tag的UI显示 
   - [x] bar label：bar 上方 dot / badge
   - [x] segment label：横向 band / line

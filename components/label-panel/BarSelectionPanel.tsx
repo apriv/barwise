@@ -181,6 +181,7 @@ export function BarSelectionPanel({
   sessionId,
 }: BarSelectionPanelProps) {
   const searchParams = useSearchParams();
+  const [showOhlc, setShowOhlc] = useState(false);
   const selectedBarNumber = Number(searchParams.get("bar"));
   const rangeStartNumber = Number(searchParams.get("rangeStart"));
   const rangeEndNumber = Number(searchParams.get("rangeEnd"));
@@ -310,31 +311,56 @@ export function BarSelectionPanel({
 
   return (
     <div className="space-y-5">
-      <div className="space-y-1">
-        <h2 className="text-sm font-medium text-zinc-100">
-          Bar #{selectedBar.barNumber}
-        </h2>
-        <p className="text-xs text-zinc-500">Selected from chart</p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-1">
+          <h2 className="text-sm font-medium text-zinc-100">
+            Bar #{selectedBar.barNumber}
+          </h2>
+          <p className="text-xs text-zinc-500">Selected from chart</p>
+        </div>
+        <button
+          type="button"
+          aria-expanded={showOhlc}
+          onClick={() => setShowOhlc((value) => !value)}
+          className={
+            "h-7 rounded border px-2.5 text-xs font-medium transition-colors " +
+            (showOhlc
+              ? "border-zinc-600 bg-zinc-800 text-zinc-100"
+              : "border-zinc-800 bg-zinc-950 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300")
+          }
+        >
+          OHLC
+        </button>
       </div>
 
-      <dl className="grid grid-cols-2 gap-3 font-mono text-xs">
-        <div className="rounded border border-zinc-800 bg-zinc-900/40 p-3">
-          <dt className="text-zinc-500">Open</dt>
-          <dd className="mt-1 text-zinc-100">{formatPrice(selectedBar.open)}</dd>
-        </div>
-        <div className="rounded border border-zinc-800 bg-zinc-900/40 p-3">
-          <dt className="text-zinc-500">High</dt>
-          <dd className="mt-1 text-zinc-100">{formatPrice(selectedBar.high)}</dd>
-        </div>
-        <div className="rounded border border-zinc-800 bg-zinc-900/40 p-3">
-          <dt className="text-zinc-500">Low</dt>
-          <dd className="mt-1 text-zinc-100">{formatPrice(selectedBar.low)}</dd>
-        </div>
-        <div className="rounded border border-zinc-800 bg-zinc-900/40 p-3">
-          <dt className="text-zinc-500">Close</dt>
-          <dd className="mt-1 text-zinc-100">{formatPrice(selectedBar.close)}</dd>
-        </div>
-      </dl>
+      {showOhlc ? (
+        <dl className="grid grid-cols-2 gap-3 font-mono text-xs">
+          <div className="rounded border border-zinc-800 bg-zinc-900/40 p-3">
+            <dt className="text-zinc-500">Open</dt>
+            <dd className="mt-1 text-zinc-100">
+              {formatPrice(selectedBar.open)}
+            </dd>
+          </div>
+          <div className="rounded border border-zinc-800 bg-zinc-900/40 p-3">
+            <dt className="text-zinc-500">High</dt>
+            <dd className="mt-1 text-zinc-100">
+              {formatPrice(selectedBar.high)}
+            </dd>
+          </div>
+          <div className="rounded border border-zinc-800 bg-zinc-900/40 p-3">
+            <dt className="text-zinc-500">Low</dt>
+            <dd className="mt-1 text-zinc-100">
+              {formatPrice(selectedBar.low)}
+            </dd>
+          </div>
+          <div className="rounded border border-zinc-800 bg-zinc-900/40 p-3">
+            <dt className="text-zinc-500">Close</dt>
+            <dd className="mt-1 text-zinc-100">
+              {formatPrice(selectedBar.close)}
+            </dd>
+          </div>
+        </dl>
+      ) : null}
 
       <div className="space-y-5">
         <section className="space-y-3">
