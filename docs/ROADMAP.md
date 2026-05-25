@@ -126,7 +126,7 @@
 **目标：** 支持多 K 范围标注、segment label、context label。此阶段只负责标注数据的选择、保存、回填、修改和删除，不做复杂图上显示。
 
 ### 任务
-- [ ] 图表支持选择 bar range，选择合理的方式(拖动/control/shift)
+- [x] 图表支持选择 bar range：普通点击选 bar，Shift-click 选择 range
 - [x] 单根 bar 支持 Bar / Context 两组多 tag 表单
 - [ ] 多根 range 支持 Segment 多 tag 表单
 - [ ] `lib/repo/labels.ts` 增加 segment_tags CRUD
@@ -158,12 +158,14 @@
 
 ### 任务
 - [x] 选中 bar 时高亮对应标注
-- [ ] 选中 range 时高亮对应标注
+- [x] 选中 range 时高亮对应标注
 - [ ] 图表上下文：每个 RTH session 额外显示前一天 RTH 最后一根、后一天 RTH 第一根（待定）
 - [ ] bar 编号提示：每 2–3 根 K 线在下方显示低调小号 bar_number
 - [ ] hover 标注时显示 label summary
 - 整体UI
   - 允许深色/浅色模式切换 
+  - 下拉时保持k线图不变，只滚动bar tags选择。
+  - 允许每组bar tag收起
 - tag的UI显示 
   - [ ] bar label：bar 上方 dot / badge
   - [ ] segment label：横向 band / line

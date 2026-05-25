@@ -27,14 +27,20 @@ export type ChartBar = {
 type ChartProps = {
   bars: ChartBar[];
   selectedBarNumber?: number | null;
-  onSelectBar?: (bar: ChartBar) => void;
+  selectedRange?: { start: number; end: number } | null;
+  onSelectBar?: (bar: ChartBar, meta: { rangeMode: boolean }) => void;
 };
 
 function formatPrice(value: number) {
   return value.toFixed(2);
 }
 
-export function Chart({ bars, selectedBarNumber, onSelectBar }: ChartProps) {
+export function Chart({
+  bars,
+  selectedBarNumber,
+  selectedRange,
+  onSelectBar,
+}: ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const selectedMarkerRef = useRef<ISeriesMarkersPluginApi<Time> | null>(
@@ -50,6 +56,17 @@ export function Chart({ bars, selectedBarNumber, onSelectBar }: ChartProps) {
     if (!Number.isInteger(selectedBarNumber)) return null;
     return bars.find((bar) => bar.barNumber === selectedBarNumber) ?? null;
   }, [bars, selectedBarNumber]);
+
+  const selectedRangeBars = useMemo(() => {
+    if (!selectedRange) return [];
+
+    const start = Math.min(selectedRange.start, selectedRange.end);
+    const end = Math.max(selectedRange.start, selectedRange.end);
+
+    return bars.filter(
+      (bar) => bar.barNumber >= start && bar.barNumber <= end,
+    );
+  }, [bars, selectedRange]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -112,7 +129,9 @@ export function Chart({ bars, selectedBarNumber, onSelectBar }: ChartProps) {
 
       const bar = barsByTime.get(param.time);
       if (bar) {
-        onSelectBar?.(bar);
+        onSelectBar?.(bar, {
+          rangeMode: param.sourceEvent?.shiftKey ?? false,
+        });
       }
     }
 
@@ -134,27 +153,50 @@ export function Chart({ bars, selectedBarNumber, onSelectBar }: ChartProps) {
     const markerApi = selectedMarkerRef.current;
     if (!markerApi) return;
 
-    if (!selectedBar) {
+    const markers: SeriesMarker<Time>[] = selectedRangeBars.map((bar, index) => {
+      const isEdge =
+        index === 0 || index === selectedRangeBars.length - 1;
+
+      return {
+        id: `selected-range-${bar.id}`,
+        time: bar.time as UTCTimestamp,
+        position: "belowBar",
+        shape: "square",
+        color: "#38bdf8",
+        text: isEdge ? `#${bar.barNumber}` : undefined,
+        size: isEdge ? 0.9 : 0.45,
+      };
+    });
+
+    if (selectedBar) {
+      markers.push({
+        id: `selected-bar-${selectedBar.id}`,
+        time: selectedBar.time as UTCTimestamp,
+        position: "belowBar",
+        shape: "circle",
+        color: "#facc15",
+        text: `#${selectedBar.barNumber}`,
+        size: 1.25,
+      });
+    }
+
+    if (markers.length === 0) {
       markerApi.setMarkers([]);
       return;
     }
 
-    const selectedMarker: SeriesMarker<Time> = {
-      id: `selected-bar-${selectedBar.id}`,
-      time: selectedBar.time as UTCTimestamp,
-      position: "belowBar",
-      shape: "circle",
-      color: "#facc15",
-      text: `#${selectedBar.barNumber}`,
-      size: 1.25,
-    };
-
-    markerApi.setMarkers([selectedMarker]);
-  }, [selectedBar]);
+    markerApi.setMarkers(markers);
+  }, [selectedBar, selectedRangeBars]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex h-11 items-center gap-4 border-b border-zinc-800 px-4 font-mono text-xs text-zinc-400">
+        {selectedRange ? (
+          <span className="text-sky-300">
+            Range #{Math.min(selectedRange.start, selectedRange.end)}-
+            {Math.max(selectedRange.start, selectedRange.end)}
+          </span>
+        ) : null}
         {hoveredBar ? (
           <>
             <span className="text-zinc-100">#{hoveredBar.barNumber}</span>
