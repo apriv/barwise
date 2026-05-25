@@ -167,7 +167,7 @@
   - 下拉时保持k线图不变，只滚动bar tags选择。
   - 允许每组bar tag收起
 - tag的UI显示 
-  - [ ] bar label：bar 上方 dot / badge
+  - [x] bar label：bar 上方 dot / badge
   - [ ] segment label：横向 band / line
   - [ ] context label：bar 下方 marker 或侧栏摘要
   - segment 的回填现在只有完全对应的 segment 会显示；后续需要显示/提示相交 segment

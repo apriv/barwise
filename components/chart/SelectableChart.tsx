@@ -3,9 +3,19 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo } from "react";
 
-import { Chart, type ChartBar } from "@/components/chart/Chart";
+import {
+  Chart,
+  type BarTagMarker,
+  type ChartBar,
+} from "@/components/chart/Chart";
 
-export function SelectableChart({ bars }: { bars: ChartBar[] }) {
+export function SelectableChart({
+  bars,
+  barTagMarkers,
+}: {
+  bars: ChartBar[];
+  barTagMarkers: BarTagMarker[];
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -64,6 +74,7 @@ export function SelectableChart({ bars }: { bars: ChartBar[] }) {
   return (
     <Chart
       bars={bars}
+      barTagMarkers={barTagMarkers}
       selectedBarNumber={selectedBarNumber}
       selectedRange={selectedRange}
       onSelectBar={selectBar}

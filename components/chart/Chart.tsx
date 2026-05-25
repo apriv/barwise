@@ -24,8 +24,14 @@ export type ChartBar = {
   volume: number | null;
 };
 
+export type BarTagMarker = {
+  barNumber: number;
+  count: number;
+};
+
 type ChartProps = {
   bars: ChartBar[];
+  barTagMarkers?: BarTagMarker[];
   selectedBarNumber?: number | null;
   selectedRange?: { start: number; end: number } | null;
   onSelectBar?: (bar: ChartBar, meta: { rangeMode: boolean }) => void;
@@ -37,6 +43,7 @@ function formatPrice(value: number) {
 
 export function Chart({
   bars,
+  barTagMarkers = [],
   selectedBarNumber,
   selectedRange,
   onSelectBar,
@@ -67,6 +74,19 @@ export function Chart({
       (bar) => bar.barNumber >= start && bar.barNumber <= end,
     );
   }, [bars, selectedRange]);
+
+  const labeledBars = useMemo(() => {
+    const countsByBarNumber = new Map(
+      barTagMarkers.map((marker) => [marker.barNumber, marker.count]),
+    );
+
+    return bars
+      .map((bar) => ({
+        bar,
+        count: countsByBarNumber.get(bar.barNumber) ?? 0,
+      }))
+      .filter((marker) => marker.count > 0);
+  }, [bars, barTagMarkers]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -153,7 +173,17 @@ export function Chart({
     const markerApi = selectedMarkerRef.current;
     if (!markerApi) return;
 
-    const markers: SeriesMarker<Time>[] = selectedRangeBars.map((bar, index) => {
+    const markers: SeriesMarker<Time>[] = labeledBars.map(({ bar, count }) => ({
+      id: `bar-tags-${bar.id}`,
+      time: bar.time as UTCTimestamp,
+      position: "aboveBar",
+      shape: "circle",
+      color: "#22c55e",
+      text: count > 1 ? String(count) : undefined,
+      size: 0.55,
+    }));
+
+    const rangeMarkers: SeriesMarker<Time>[] = selectedRangeBars.map((bar, index) => {
       const isEdge =
         index === 0 || index === selectedRangeBars.length - 1;
 
@@ -167,6 +197,8 @@ export function Chart({
         size: isEdge ? 0.9 : 0.45,
       };
     });
+
+    markers.push(...rangeMarkers);
 
     if (selectedBar) {
       markers.push({
@@ -186,7 +218,7 @@ export function Chart({
     }
 
     markerApi.setMarkers(markers);
-  }, [selectedBar, selectedRangeBars]);
+  }, [labeledBars, selectedBar, selectedRangeBars]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
