@@ -171,7 +171,6 @@
   - [x] context label：bar 下方 marker 或侧栏摘要
   - segment 的回填现在只有完全对应的 segment 会显示；后续需要显示/提示相交 segment
 - [x] 加一个按钮隐藏/显示已标记的记号，有点眼花。只保留当前选择的
-- [ ] 图表上下文：每个 RTH session 额外显示前一天 RTH 最后一根、后一天 RTH 第一根（待定 先不做）
 
 ### 不做
 - 新增标注数据类型
@@ -194,11 +193,19 @@ M1–M5 完成后就是 V1：
 ---
 
 ## 未来
-- 字典编辑 UI
+- 把 tag 映射到底层 field
+- 字典编辑 UI。需要增减/修改 tag，并做出对应底层的field
+- 下一步最重要的是在人工标注的同时，把标签做得更好，更可用
 - 更好的已标注展示，例如TR框，trend划线，double top划线
 - Outcome Labels：第 4 类标签，事后回看打的结果（failed_breakout / continued / reversed 等）。
 - ETH / DAY / RTH 视图切换
 - 相似 case 检索，筛选
+- doji等确定的，自动标注
 - NLP / YouTube transcript 半自动标注
-- 模型训练 dashboard
+- 区别不同标注方式产生的标签
+- 模型训练，自动标注/判断
+- 人工回测
 
+## 待办
+- dark模式只修改k线图颜色，不修改其它，但是我只需要light，直接暂时把dark disable掉就可以了，暂时不用修
+- 上方Demo tab删掉

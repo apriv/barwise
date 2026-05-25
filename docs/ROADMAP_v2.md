@@ -283,7 +283,7 @@ source
 
 ---
 
-## M5 — Annotation UX Upgrade
+## M5 — Annotation UX Upgrade（暂时不做）
 
 **目标：** 提高日常打标速度：搜索、折叠、最近、常用，让标签数量增加后仍然好用。
 
