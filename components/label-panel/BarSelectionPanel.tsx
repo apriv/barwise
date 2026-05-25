@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useMemo, useOptimistic, useTransition } from "react";
+import { useMemo, useOptimistic, useState, useTransition } from "react";
 
 import type { ChartBar } from "@/components/chart/Chart";
 import {
@@ -90,6 +90,7 @@ function TagGroup({
     },
   );
   const [isPending, startTransition] = useTransition();
+  const [isExpanded, setIsExpanded] = useState(true);
 
   const selectedCount = options.filter((option) =>
     optimisticTags.has(option.key),
@@ -126,33 +127,45 @@ function TagGroup({
         <legend className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
           {formatGroupName(groupName)}
         </legend>
-        <span className="font-mono text-[11px] text-zinc-600">
-          {selectedCount}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[11px] text-zinc-600">
+            {selectedCount}
+          </span>
+          <button
+            type="button"
+            aria-expanded={isExpanded}
+            onClick={() => setIsExpanded((value) => !value)}
+            className="grid h-6 w-6 place-items-center rounded border border-zinc-800 bg-zinc-950 font-mono text-xs text-zinc-500 transition-colors hover:border-zinc-700 hover:text-zinc-200"
+          >
+            {isExpanded ? "-" : "+"}
+          </button>
+        </div>
       </div>
-      <div className="flex flex-wrap gap-2">
-        {options.map((option) => {
-          const selected = optimisticTags.has(option.key);
-          return (
-            <button
-              key={option.id}
-              type="button"
-              aria-pressed={selected}
-              disabled={isPending}
-              onClick={() => handleToggle(option.key)}
-              title={option.description ?? undefined}
-              className={
-                "min-h-8 rounded border px-2.5 py-1.5 text-left text-xs font-medium transition-colors disabled:cursor-wait disabled:opacity-70 " +
-                (selected
-                  ? "border-emerald-500/80 bg-emerald-500/15 text-emerald-100 shadow-[0_0_0_1px_rgba(52,211,153,0.18)]"
-                  : "border-zinc-800 bg-zinc-900/40 text-zinc-300 hover:border-zinc-600 hover:bg-zinc-900 hover:text-zinc-100")
-              }
-            >
-              {option.label}
-            </button>
-          );
-        })}
-      </div>
+      {isExpanded ? (
+        <div className="flex flex-wrap gap-2">
+          {options.map((option) => {
+            const selected = optimisticTags.has(option.key);
+            return (
+              <button
+                key={option.id}
+                type="button"
+                aria-pressed={selected}
+                disabled={isPending}
+                onClick={() => handleToggle(option.key)}
+                title={option.description ?? undefined}
+                className={
+                  "min-h-8 rounded border px-2.5 py-1.5 text-left text-xs font-medium transition-colors disabled:cursor-wait disabled:opacity-70 " +
+                  (selected
+                    ? "border-emerald-500/80 bg-emerald-500/15 text-emerald-100 shadow-[0_0_0_1px_rgba(52,211,153,0.18)]"
+                    : "border-zinc-800 bg-zinc-900/40 text-zinc-300 hover:border-zinc-600 hover:bg-zinc-900 hover:text-zinc-100")
+                }
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
     </fieldset>
   );
 }
