@@ -100,10 +100,10 @@ export default async function SessionPage({ params }: PageProps) {
 
   return (
     <main className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_360px]">
-      <section className="flex min-h-0 flex-col border-r border-zinc-800">
-        <header className="flex items-center justify-between border-b border-zinc-800 px-5 py-3">
+      <section className="flex min-h-0 flex-col border-r border-zinc-200 dark:border-zinc-800">
+        <header className="flex items-center justify-between border-b border-zinc-200 px-5 py-3 dark:border-zinc-800">
           <div>
-            <h1 className="text-lg font-semibold text-zinc-100">
+            <h1 className="text-lg font-semibold text-zinc-950 dark:text-zinc-100">
               {session.session_date} {session.session_type}
             </h1>
             <p className="text-sm text-zinc-500">
@@ -115,30 +115,30 @@ export default async function SessionPage({ params }: PageProps) {
             {previous ? (
               <Link
                 href={`/sessions/${previous.id}`}
-                className="rounded border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100"
+                className="rounded border border-zinc-300 px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
               >
                 Prev
               </Link>
             ) : (
-              <span className="rounded border border-zinc-800 px-3 py-1.5 text-sm text-zinc-600">
+              <span className="rounded border border-zinc-200 px-3 py-1.5 text-sm text-zinc-400 dark:border-zinc-800 dark:text-zinc-600">
                 Prev
               </span>
             )}
             {next ? (
               <Link
                 href={`/sessions/${next.id}`}
-                className="rounded border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100"
+                className="rounded border border-zinc-300 px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
               >
                 Next
               </Link>
             ) : (
-              <span className="rounded border border-zinc-800 px-3 py-1.5 text-sm text-zinc-600">
+              <span className="rounded border border-zinc-200 px-3 py-1.5 text-sm text-zinc-400 dark:border-zinc-800 dark:text-zinc-600">
                 Next
               </span>
             )}
             <Link
               href="/sessions"
-              className="rounded border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100"
+              className="rounded border border-zinc-300 px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
             >
               Sessions
             </Link>
@@ -154,7 +154,7 @@ export default async function SessionPage({ params }: PageProps) {
         </div>
       </section>
 
-      <aside className="min-h-0 overflow-y-auto border-l border-zinc-900 bg-zinc-950 p-5">
+      <aside className="min-h-0 overflow-y-auto border-l border-zinc-200 bg-zinc-50 p-5 dark:border-zinc-900 dark:bg-zinc-950">
         <BarSelectionPanel
           bars={bars}
           barTags={barTags}

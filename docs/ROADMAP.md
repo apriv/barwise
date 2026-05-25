@@ -161,7 +161,7 @@
 - [x] 选中 range 时高亮对应标注
 - [x] bar 编号提示：每 2–3 根 K 线在下方显示低调小号 bar_number
 - 整体UI
-  - 允许深色/浅色模式切换 
+  - [x] 允许深色/浅色模式切换
   - [x] 下拉时保持 K 线图不变，只滚动 bar tags 选择。
   - [x] 允许每组 bar tag 收起
   - [x] 右侧默认收起 OHLC，有个按钮可以展开。这个看得比较少
@@ -193,25 +193,12 @@ M1–M5 完成后就是 V1：
 
 ---
 
-## 未来（先不做）
-
-- **Outcome Labels**：第 4 类标签，事后回看打的结果（failed_breakout / continued / reversed 等）。需要设计 outcome ↔ segment/context 的锚定关系。先用 segment note 兜底。
-- ETH / DAY / RTH 视图切换
-- 上传任意 CSV
+## 未来
 - 字典编辑 UI
-- JSON/JSONL 导出
-- CSV zip
-- 回放模式
-- 相似 case 检索
+- 更好的已标注展示，例如TR框，trend划线，double top划线
+- Outcome Labels：第 4 类标签，事后回看打的结果（failed_breakout / continued / reversed 等）。
+- ETH / DAY / RTH 视图切换
+- 相似 case 检索，筛选
 - NLP / YouTube transcript 半自动标注
 - 模型训练 dashboard
 
----
-
-## 明确不做
-
-- 多用户、登录、远程部署
-- 多 instrument UI
-- 移动端
-- 自动交易、信号推送
-- 任何金融建议功能

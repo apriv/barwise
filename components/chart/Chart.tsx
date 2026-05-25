@@ -70,6 +70,23 @@ export function Chart({
   );
   const [hoveredBar, setHoveredBar] = useState<ChartBar | null>(bars[0] ?? null);
   const [showSavedMarkers, setShowSavedMarkers] = useState(true);
+  const [isDarkTheme, setIsDarkTheme] = useState(true);
+
+  useEffect(() => {
+    function syncTheme() {
+      setIsDarkTheme(document.documentElement.classList.contains("dark"));
+    }
+
+    syncTheme();
+
+    const observer = new MutationObserver(syncTheme);
+    observer.observe(document.documentElement, {
+      attributeFilter: ["class"],
+      attributes: true,
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   const barsByTime = useMemo(() => {
     return new Map(bars.map((bar) => [bar.time, bar]));
@@ -147,22 +164,22 @@ export function Chart({
 
     const chart = createChart(containerRef.current, {
       layout: {
-        background: { color: "#0a0a0a" },
-        textColor: "#d4d4d8",
+        background: { color: isDarkTheme ? "#0a0a0a" : "#ffffff" },
+        textColor: isDarkTheme ? "#d4d4d8" : "#3f3f46",
       },
       grid: {
-        vertLines: { color: "#1f1f23" },
-        horzLines: { color: "#1f1f23" },
+        vertLines: { color: isDarkTheme ? "#1f1f23" : "#e4e4e7" },
+        horzLines: { color: isDarkTheme ? "#1f1f23" : "#e4e4e7" },
       },
       timeScale: {
         timeVisible: true,
         secondsVisible: false,
-        borderColor: "#27272a",
+        borderColor: isDarkTheme ? "#27272a" : "#d4d4d8",
       },
-      rightPriceScale: { borderColor: "#27272a" },
+      rightPriceScale: { borderColor: isDarkTheme ? "#27272a" : "#d4d4d8" },
       crosshair: {
-        vertLine: { color: "#71717a" },
-        horzLine: { color: "#71717a" },
+        vertLine: { color: isDarkTheme ? "#71717a" : "#a1a1aa" },
+        horzLine: { color: isDarkTheme ? "#71717a" : "#a1a1aa" },
       },
       autoSize: true,
     });
@@ -221,7 +238,7 @@ export function Chart({
       chart.remove();
       chartRef.current = null;
     };
-  }, [bars, barsByTime, onSelectBar]);
+  }, [bars, barsByTime, isDarkTheme, onSelectBar]);
 
   useEffect(() => {
     const markerApi = selectedMarkerRef.current;
@@ -329,7 +346,7 @@ export function Chart({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex h-11 items-center justify-between gap-4 border-b border-zinc-800 px-4 font-mono text-xs text-zinc-400">
+      <div className="flex h-11 items-center justify-between gap-4 border-b border-zinc-200 px-4 font-mono text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
         <div className="flex min-w-0 items-center gap-4 overflow-hidden">
           {selectedRange ? (
             <span className="shrink-0 text-sky-300">
@@ -339,7 +356,7 @@ export function Chart({
           ) : null}
           {hoveredBar ? (
             <>
-              <span className="shrink-0 text-zinc-100">
+              <span className="shrink-0 text-zinc-950 dark:text-zinc-100">
                 #{hoveredBar.barNumber}
               </span>
               <span className="shrink-0">O {formatPrice(hoveredBar.open)}</span>
@@ -359,8 +376,8 @@ export function Chart({
           className={
             "h-7 min-w-16 shrink-0 rounded border px-2.5 text-xs font-medium transition-colors " +
             (showSavedMarkers
-              ? "border-zinc-600 bg-zinc-800 text-zinc-100"
-              : "border-zinc-800 bg-zinc-950 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300")
+              ? "border-zinc-400 bg-zinc-200 text-zinc-950 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+              : "border-zinc-300 bg-white text-zinc-500 hover:border-zinc-400 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-500 dark:hover:border-zinc-700 dark:hover:text-zinc-300")
           }
         >
           Marks

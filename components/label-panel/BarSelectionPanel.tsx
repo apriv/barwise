@@ -122,20 +122,20 @@ function TagGroup({
   }
 
   return (
-    <fieldset className="space-y-3 rounded border border-zinc-800 bg-zinc-950/60 p-3">
+    <fieldset className="space-y-3 rounded border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950/60">
       <div className="flex items-center justify-between gap-3">
-        <legend className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+        <legend className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
           {formatGroupName(groupName)}
         </legend>
         <div className="flex items-center gap-2">
-          <span className="font-mono text-[11px] text-zinc-600">
+          <span className="font-mono text-[11px] text-zinc-500 dark:text-zinc-600">
             {selectedCount}
           </span>
           <button
             type="button"
             aria-expanded={isExpanded}
             onClick={() => setIsExpanded((value) => !value)}
-            className="grid h-6 w-6 place-items-center rounded border border-zinc-800 bg-zinc-950 font-mono text-xs text-zinc-500 transition-colors hover:border-zinc-700 hover:text-zinc-200"
+            className="grid h-6 w-6 place-items-center rounded border border-zinc-300 bg-white font-mono text-xs text-zinc-500 transition-colors hover:border-zinc-400 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-500 dark:hover:border-zinc-700 dark:hover:text-zinc-200"
           >
             {isExpanded ? "-" : "+"}
           </button>
@@ -156,8 +156,8 @@ function TagGroup({
                 className={
                   "min-h-8 rounded border px-2.5 py-1.5 text-left text-xs font-medium transition-colors disabled:cursor-wait disabled:opacity-70 " +
                   (selected
-                    ? "border-emerald-500/80 bg-emerald-500/15 text-emerald-100 shadow-[0_0_0_1px_rgba(52,211,153,0.18)]"
-                    : "border-zinc-800 bg-zinc-900/40 text-zinc-300 hover:border-zinc-600 hover:bg-zinc-900 hover:text-zinc-100")
+                    ? "border-emerald-500/70 bg-emerald-50 text-emerald-800 dark:border-emerald-500/80 dark:bg-emerald-500/15 dark:text-emerald-100 shadow-[0_0_0_1px_rgba(52,211,153,0.18)]"
+                    : "border-zinc-300 bg-white text-zinc-700 hover:border-zinc-400 hover:bg-zinc-100 hover:text-zinc-950 dark:border-zinc-800 dark:bg-zinc-900/40 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:bg-zinc-900 dark:hover:text-zinc-100")
                 }
               >
                 {option.label}
@@ -272,7 +272,7 @@ export function BarSelectionPanel({
     return (
       <div className="space-y-5">
         <div className="space-y-1">
-          <h2 className="text-sm font-medium text-zinc-100">
+          <h2 className="text-sm font-medium text-zinc-950 dark:text-zinc-100">
             Range #{selectedRange.startNumber}-{selectedRange.endNumber}
           </h2>
           <p className="text-xs text-zinc-500">
@@ -303,7 +303,7 @@ export function BarSelectionPanel({
   if (!selectedBar) {
     return (
       <div className="space-y-2">
-        <h2 className="text-sm font-medium text-zinc-100">Bar Tags</h2>
+        <h2 className="text-sm font-medium text-zinc-950 dark:text-zinc-100">Bar Tags</h2>
         <p className="text-sm text-zinc-500">Click a candle to select a bar.</p>
       </div>
     );
@@ -313,7 +313,7 @@ export function BarSelectionPanel({
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
-          <h2 className="text-sm font-medium text-zinc-100">
+          <h2 className="text-sm font-medium text-zinc-950 dark:text-zinc-100">
             Bar #{selectedBar.barNumber}
           </h2>
           <p className="text-xs text-zinc-500">Selected from chart</p>
@@ -325,8 +325,8 @@ export function BarSelectionPanel({
           className={
             "h-7 rounded border px-2.5 text-xs font-medium transition-colors " +
             (showOhlc
-              ? "border-zinc-600 bg-zinc-800 text-zinc-100"
-              : "border-zinc-800 bg-zinc-950 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300")
+              ? "border-zinc-400 bg-zinc-200 text-zinc-950 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+              : "border-zinc-300 bg-white text-zinc-500 hover:border-zinc-400 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-500 dark:hover:border-zinc-700 dark:hover:text-zinc-300")
           }
         >
           OHLC
@@ -335,27 +335,27 @@ export function BarSelectionPanel({
 
       {showOhlc ? (
         <dl className="grid grid-cols-2 gap-3 font-mono text-xs">
-          <div className="rounded border border-zinc-800 bg-zinc-900/40 p-3">
+          <div className="rounded border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900/40">
             <dt className="text-zinc-500">Open</dt>
-            <dd className="mt-1 text-zinc-100">
+            <dd className="mt-1 text-zinc-950 dark:text-zinc-100">
               {formatPrice(selectedBar.open)}
             </dd>
           </div>
-          <div className="rounded border border-zinc-800 bg-zinc-900/40 p-3">
+          <div className="rounded border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900/40">
             <dt className="text-zinc-500">High</dt>
-            <dd className="mt-1 text-zinc-100">
+            <dd className="mt-1 text-zinc-950 dark:text-zinc-100">
               {formatPrice(selectedBar.high)}
             </dd>
           </div>
-          <div className="rounded border border-zinc-800 bg-zinc-900/40 p-3">
+          <div className="rounded border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900/40">
             <dt className="text-zinc-500">Low</dt>
-            <dd className="mt-1 text-zinc-100">
+            <dd className="mt-1 text-zinc-950 dark:text-zinc-100">
               {formatPrice(selectedBar.low)}
             </dd>
           </div>
-          <div className="rounded border border-zinc-800 bg-zinc-900/40 p-3">
+          <div className="rounded border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900/40">
             <dt className="text-zinc-500">Close</dt>
-            <dd className="mt-1 text-zinc-100">
+            <dd className="mt-1 text-zinc-950 dark:text-zinc-100">
               {formatPrice(selectedBar.close)}
             </dd>
           </div>

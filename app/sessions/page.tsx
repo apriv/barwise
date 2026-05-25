@@ -21,18 +21,18 @@ export default async function SessionsPage() {
       <section className="w-full max-w-5xl space-y-6">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-100">
+            <h1 className="text-2xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-100">
               Sessions
             </h1>
-            <p className="text-sm text-zinc-400">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
               ES RTH sessions from data/samples/es_5m.csv.
             </p>
           </div>
         </div>
 
-        <div className="overflow-hidden rounded border border-zinc-800">
+        <div className="overflow-hidden rounded border border-zinc-200 dark:border-zinc-800">
           <table className="w-full border-collapse text-left text-sm">
-            <thead className="bg-zinc-900 text-xs uppercase tracking-wide text-zinc-500">
+            <thead className="bg-zinc-100 text-xs uppercase tracking-wide text-zinc-500 dark:bg-zinc-900 dark:text-zinc-500">
               <tr>
                 <th className="px-4 py-3 font-medium">Date</th>
                 <th className="px-4 py-3 font-medium">Type</th>
@@ -41,27 +41,27 @@ export default async function SessionsPage() {
                 <th className="px-4 py-3 font-medium">Loaded</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800">
+            <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
               {sessions.map((session) => (
-                <tr key={session.id} className="hover:bg-zinc-900/60">
+                <tr key={session.id} className="hover:bg-zinc-100/80 dark:hover:bg-zinc-900/60">
                   <td className="px-4 py-3">
                     <Link
                       href={`/sessions/${session.id}`}
-                      className="font-medium text-zinc-100 hover:text-white"
+                      className="font-medium text-zinc-950 hover:text-zinc-700 dark:text-zinc-100 dark:hover:text-white"
                     >
                       {session.session_date}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-zinc-300">
+                  <td className="px-4 py-3 text-zinc-700 dark:text-zinc-300">
                     {session.session_type}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono text-zinc-300">
+                  <td className="px-4 py-3 text-right font-mono text-zinc-700 dark:text-zinc-300">
                     {session.bar_count}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono text-zinc-300">
+                  <td className="px-4 py-3 text-right font-mono text-zinc-700 dark:text-zinc-300">
                     {session.labeled_bar_count} / {session.bar_count}
                   </td>
-                  <td className="px-4 py-3 text-zinc-400">
+                  <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
                     {formatDateTime(session.imported_at)}
                   </td>
                 </tr>

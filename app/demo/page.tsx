@@ -15,9 +15,9 @@ export default async function DemoPage() {
 
   return (
     <>
-      <div className="flex items-baseline justify-between border-b border-zinc-800 px-6 py-3">
+      <div className="flex items-baseline justify-between border-b border-zinc-200 px-6 py-3 dark:border-zinc-800">
         <div className="flex items-baseline gap-3">
-          <span className="text-sm text-zinc-400">ES=F · 5min · sample CSV</span>
+          <span className="text-sm text-zinc-600 dark:text-zinc-400">ES=F · 5min · sample CSV</span>
         </div>
         <div className="font-mono text-xs text-zinc-500">
           {candles.length.toLocaleString()} bars · {first ? fmt(first.time) : "—"} →{" "}
