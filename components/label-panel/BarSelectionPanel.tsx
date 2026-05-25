@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useMemo, useTransition } from "react";
+import { useMemo, useOptimistic, useTransition } from "react";
 
 import type { ChartBar } from "@/components/chart/Chart";
 import { deleteBarTag, upsertBarTag } from "@/lib/actions/label";
@@ -27,6 +27,15 @@ function groupOptions(options: LabelDictionaryItem[]) {
   }, {});
 }
 
+const groupLabels: Record<string, string> = {
+  bar_quality: "Bar Quality",
+  bar_role: "Bar Role",
+};
+
+function formatGroupName(groupName: string) {
+  return groupLabels[groupName] ?? groupName.replaceAll("_", " ");
+}
+
 function TagGroup({
   groupName,
   options,
@@ -40,12 +49,32 @@ function TagGroup({
   barId: number;
   selectedTags: Set<string>;
 }) {
+  const [optimisticTags, toggleOptimisticTag] = useOptimistic(
+    selectedTags,
+    (currentTags, tagKey: string) => {
+      const nextTags = new Set(currentTags);
+
+      if (nextTags.has(tagKey)) {
+        nextTags.delete(tagKey);
+      } else {
+        nextTags.add(tagKey);
+      }
+
+      return nextTags;
+    },
+  );
   const [isPending, startTransition] = useTransition();
 
+  const selectedCount = options.filter((option) =>
+    optimisticTags.has(option.key),
+  ).length;
+
   function handleToggle(tagKey: string) {
-    const isSelected = selectedTags.has(tagKey);
+    const isSelected = optimisticTags.has(tagKey);
 
     startTransition(async () => {
+      toggleOptimisticTag(tagKey);
+
       const formData = new FormData();
       formData.set("sessionId", String(sessionId));
       formData.set("barId", String(barId));
@@ -65,13 +94,18 @@ function TagGroup({
   }
 
   return (
-    <fieldset className="space-y-2">
-      <legend className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-        {groupName}
-      </legend>
-      <div className="grid gap-2">
+    <fieldset className="space-y-3 rounded border border-zinc-800 bg-zinc-950/60 p-3">
+      <div className="flex items-center justify-between gap-3">
+        <legend className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+          {formatGroupName(groupName)}
+        </legend>
+        <span className="font-mono text-[11px] text-zinc-600">
+          {selectedCount}
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-2">
         {options.map((option) => {
-          const selected = selectedTags.has(option.key);
+          const selected = optimisticTags.has(option.key);
           return (
             <button
               key={option.id}
@@ -81,28 +115,13 @@ function TagGroup({
               onClick={() => handleToggle(option.key)}
               title={option.description ?? undefined}
               className={
-                "flex w-full items-start gap-3 rounded border p-3 text-left text-sm transition-colors disabled:cursor-wait disabled:opacity-70 " +
+                "min-h-8 rounded border px-2.5 py-1.5 text-left text-xs font-medium transition-colors disabled:cursor-wait disabled:opacity-70 " +
                 (selected
-                  ? "border-emerald-500/70 bg-emerald-500/10 text-zinc-100"
-                  : "border-zinc-800 bg-zinc-900/30 text-zinc-300 hover:border-zinc-600 hover:bg-zinc-900")
+                  ? "border-emerald-500/80 bg-emerald-500/15 text-emerald-100 shadow-[0_0_0_1px_rgba(52,211,153,0.18)]"
+                  : "border-zinc-800 bg-zinc-900/40 text-zinc-300 hover:border-zinc-600 hover:bg-zinc-900 hover:text-zinc-100")
               }
             >
-              <span
-                className={
-                  "mt-1 h-2.5 w-2.5 rounded-full border " +
-                  (selected
-                    ? "border-emerald-400 bg-emerald-400"
-                    : "border-zinc-600")
-                }
-              />
-              <span>
-                <span className="block font-medium text-zinc-100">
-                  {option.label}
-                </span>
-                <span className="block font-mono text-xs text-zinc-500">
-                  {option.key}
-                </span>
-              </span>
+              {option.label}
             </button>
           );
         })}
