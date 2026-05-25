@@ -5,6 +5,7 @@ import {
   useMemo,
   useOptimistic,
   useState,
+  useSyncExternalStore,
   useTransition,
 } from "react";
 
@@ -42,6 +43,7 @@ type BarSelectionPanelProps = {
 
 type FormFields = Record<string, number | string>;
 type ToggleAction = (formData: FormData) => Promise<void>;
+const expandedStateEvent = "barwise-tag-panel-expanded";
 
 function formatPrice(value: number) {
   return value.toFixed(2);
@@ -124,6 +126,46 @@ function TagSearchInput({
   );
 }
 
+function subscribeToExpandedState(onStoreChange: () => void) {
+  window.addEventListener(expandedStateEvent, onStoreChange);
+  window.addEventListener("storage", onStoreChange);
+
+  return () => {
+    window.removeEventListener(expandedStateEvent, onStoreChange);
+    window.removeEventListener("storage", onStoreChange);
+  };
+}
+
+function expandedSnapshot(storageKey: string) {
+  try {
+    return window.localStorage.getItem(storageKey) ?? "1";
+  } catch {
+    return "1";
+  }
+}
+
+function usePersistedExpandedState(storageKey: string) {
+  const snapshot = useSyncExternalStore(
+    subscribeToExpandedState,
+    () => expandedSnapshot(storageKey),
+    () => "1",
+  );
+
+  const isExpanded = snapshot !== "0";
+
+  function setExpanded(next: boolean) {
+    try {
+      window.localStorage.setItem(storageKey, next ? "1" : "0");
+    } catch {
+      // Ignore localStorage failures.
+    }
+
+    window.dispatchEvent(new Event(expandedStateEvent));
+  }
+
+  return [isExpanded, setExpanded] as const;
+}
+
 function TagGroup({
   groupName,
   options,
@@ -156,20 +198,7 @@ function TagGroup({
     },
   );
   const [isPending, startTransition] = useTransition();
-  const [isExpanded, setIsExpanded] = useState(() => {
-    if (typeof window === "undefined") return true;
-
-    try {
-      const stored = window.localStorage.getItem(storageKey);
-      if (stored !== null) {
-        return stored === "1";
-      }
-    } catch {
-      // Ignore localStorage failures; collapsed state is only a convenience.
-    }
-
-    return true;
-  });
+  const [isExpanded, setIsExpanded] = usePersistedExpandedState(storageKey);
 
   const selectedCount = options.filter((option) =>
     optimisticTags.has(option.key),
@@ -201,15 +230,7 @@ function TagGroup({
   }
 
   function toggleExpanded() {
-    setIsExpanded((value) => {
-      const next = !value;
-      try {
-        window.localStorage.setItem(storageKey, next ? "1" : "0");
-      } catch {
-        // Ignore localStorage failures.
-      }
-      return next;
-    });
+    setIsExpanded(!isExpanded);
   }
 
   return (
