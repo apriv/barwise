@@ -8,6 +8,7 @@ import {
   type BarTagMarker,
   type ChartBar,
   type ContextTagMarker,
+  type OutcomeTagMarker,
   type SegmentTagMarker,
 } from "@/components/chart/Chart";
 
@@ -16,11 +17,13 @@ export function SelectableChart({
   barTagMarkers,
   contextTagMarkers,
   segmentTagMarkers,
+  outcomeTagMarkers,
 }: {
   bars: ChartBar[];
   barTagMarkers: BarTagMarker[];
   contextTagMarkers: ContextTagMarker[];
   segmentTagMarkers: SegmentTagMarker[];
+  outcomeTagMarkers: OutcomeTagMarker[];
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -83,6 +86,7 @@ export function SelectableChart({
       barTagMarkers={barTagMarkers}
       contextTagMarkers={contextTagMarkers}
       segmentTagMarkers={segmentTagMarkers}
+      outcomeTagMarkers={outcomeTagMarkers}
       selectedBarNumber={selectedBarNumber}
       selectedRange={selectedRange}
       onSelectBar={selectBar}

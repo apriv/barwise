@@ -7,15 +7,18 @@ import type { ChartBar } from "@/components/chart/Chart";
 import {
   deleteBarTag,
   deleteContextTag,
+  deleteOutcomeTag,
   deleteSegmentTag,
   upsertBarTag,
   upsertContextTag,
+  upsertOutcomeTag,
   upsertSegmentTag,
 } from "@/lib/actions/label";
 import type { LabelDictionaryItem } from "@/lib/repo/dictionary";
 import type {
   BarTagRecord,
   ContextTagRecord,
+  OutcomeTagRecord,
   SegmentTagRecord,
 } from "@/lib/repo/labels";
 
@@ -24,9 +27,11 @@ type BarSelectionPanelProps = {
   barTags: BarTagRecord[];
   contextTags: ContextTagRecord[];
   segmentTags: SegmentTagRecord[];
+  outcomeTags: OutcomeTagRecord[];
   barTagOptions: LabelDictionaryItem[];
   contextTagOptions: LabelDictionaryItem[];
   segmentTagOptions: LabelDictionaryItem[];
+  outcomeTagOptions: LabelDictionaryItem[];
   sessionId: number;
 };
 
@@ -54,6 +59,7 @@ const groupLabels: Record<string, string> = {
   current_event: "Current Event",
   trade_quality: "Trade Quality",
   segment_kind: "Segment Kind",
+  outcome_result: "Outcome Result",
 };
 
 function formatGroupName(groupName: string) {
@@ -175,13 +181,18 @@ export function BarSelectionPanel({
   barTags,
   contextTags,
   segmentTags,
+  outcomeTags,
   barTagOptions,
   contextTagOptions,
   segmentTagOptions,
+  outcomeTagOptions,
   sessionId,
 }: BarSelectionPanelProps) {
   const searchParams = useSearchParams();
   const [showOhlc, setShowOhlc] = useState(false);
+  const [outcomeConfirmBarId, setOutcomeConfirmBarId] = useState<number | null>(
+    null,
+  );
   const selectedBarNumber = Number(searchParams.get("bar"));
   const rangeStartNumber = Number(searchParams.get("rangeStart"));
   const rangeEndNumber = Number(searchParams.get("rangeEnd"));
@@ -231,6 +242,11 @@ export function BarSelectionPanel({
     [segmentTagOptions],
   );
 
+  const outcomeOptionsByGroup = useMemo(
+    () => groupOptions(outcomeTagOptions),
+    [outcomeTagOptions],
+  );
+
   const selectedBarTagsSet = useMemo(() => {
     if (!selectedBar) return new Set<string>();
     return new Set(
@@ -262,11 +278,38 @@ export function BarSelectionPanel({
     );
   }, [segmentTags, selectedRange]);
 
+  const selectedOutcomeTagsSet = useMemo(() => {
+    if (!selectedRange) return new Set<string>();
+    return new Set(
+      outcomeTags
+        .filter(
+          (tag) =>
+            tag.start_bar_id === selectedRange.startBar.id &&
+            tag.end_bar_id === selectedRange.endBar.id,
+        )
+        .map((tag) => tag.tag_key),
+    );
+  }, [outcomeTags, selectedRange]);
+
   if (selectedRange) {
+    const rangeBars = bars.filter(
+      (bar) =>
+        bar.barNumber >= selectedRange.startNumber &&
+        bar.barNumber <= selectedRange.endNumber,
+    );
+    const effectiveConfirmBarId =
+      outcomeConfirmBarId &&
+      rangeBars.some((bar) => bar.id === outcomeConfirmBarId)
+        ? outcomeConfirmBarId
+        : selectedRange.endBar.id;
     const segmentFormFields = {
       sessionId,
       startBarId: selectedRange.startBar.id,
       endBarId: selectedRange.endBar.id,
+    };
+    const outcomeFormFields = {
+      ...segmentFormFields,
+      confirmBarId: effectiveConfirmBarId,
     };
 
     return (
@@ -293,6 +336,41 @@ export function BarSelectionPanel({
               selectedTags={selectedSegmentTagsSet}
               upsertAction={upsertSegmentTag}
               deleteAction={deleteSegmentTag}
+            />
+          ))}
+        </section>
+
+        <section className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+              Outcome Tags
+            </h3>
+            <label className="flex items-center gap-2 text-xs text-zinc-500">
+              Confirm
+              <select
+                value={effectiveConfirmBarId}
+                onChange={(event) =>
+                  setOutcomeConfirmBarId(Number(event.target.value))
+                }
+                className="rounded border border-zinc-300 bg-white px-2 py-1 text-xs text-zinc-800 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
+              >
+                {rangeBars.map((bar) => (
+                  <option key={bar.id} value={bar.id}>
+                    #{bar.barNumber}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          {Object.entries(outcomeOptionsByGroup).map(([groupName, options]) => (
+            <TagGroup
+              key={`${selectedRange.startBar.id}:${selectedRange.endBar.id}:outcome:${groupName}:${effectiveConfirmBarId}`}
+              groupName={groupName}
+              options={options}
+              formFields={outcomeFormFields}
+              selectedTags={selectedOutcomeTagsSet}
+              upsertAction={upsertOutcomeTag}
+              deleteAction={deleteOutcomeTag}
             />
           ))}
         </section>

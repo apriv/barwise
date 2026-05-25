@@ -40,11 +40,17 @@ export type ContextTagMarker = {
   count: number;
 };
 
+export type OutcomeTagMarker = {
+  barNumber: number;
+  count: number;
+};
+
 type ChartProps = {
   bars: ChartBar[];
   barTagMarkers?: BarTagMarker[];
   contextTagMarkers?: ContextTagMarker[];
   segmentTagMarkers?: SegmentTagMarker[];
+  outcomeTagMarkers?: OutcomeTagMarker[];
   selectedBarNumber?: number | null;
   selectedRange?: { start: number; end: number } | null;
   onSelectBar?: (bar: ChartBar, meta: { rangeMode: boolean }) => void;
@@ -59,6 +65,7 @@ export function Chart({
   barTagMarkers = [],
   contextTagMarkers = [],
   segmentTagMarkers = [],
+  outcomeTagMarkers = [],
   selectedBarNumber,
   selectedRange,
   onSelectBar,
@@ -133,6 +140,19 @@ export function Chart({
       }))
       .filter((marker) => marker.count > 0);
   }, [bars, contextTagMarkers]);
+
+  const outcomeBars = useMemo(() => {
+    const countsByBarNumber = new Map(
+      outcomeTagMarkers.map((marker) => [marker.barNumber, marker.count]),
+    );
+
+    return bars
+      .map((bar) => ({
+        bar,
+        count: countsByBarNumber.get(bar.barNumber) ?? 0,
+      }))
+      .filter((marker) => marker.count > 0);
+  }, [bars, outcomeTagMarkers]);
 
   const savedSegmentBars = useMemo(() => {
     return segmentTagMarkers.flatMap((segment, segmentIndex) => {
@@ -281,6 +301,18 @@ export function Chart({
         }),
       );
 
+      const outcomeMarkers: SeriesMarker<Time>[] = outcomeBars.map(
+        ({ bar, count }) => ({
+          id: `outcome-tags-${bar.id}`,
+          time: bar.time as UTCTimestamp,
+          position: "aboveBar",
+          shape: "arrowDown",
+          color: "#ec4899",
+          text: count > 1 ? String(count) : undefined,
+          size: 0.72,
+        }),
+      );
+
       const barNumberMarkers: SeriesMarker<Time>[] = numberedBars.map((bar) => ({
         id: `bar-number-${bar.id}`,
         time: bar.time as UTCTimestamp,
@@ -295,6 +327,7 @@ export function Chart({
         ...barMarkers,
         ...savedSegmentMarkers,
         ...contextMarkers,
+        ...outcomeMarkers,
         ...barNumberMarkers,
       );
     }
@@ -338,6 +371,7 @@ export function Chart({
     contextBars,
     labeledBars,
     numberedBars,
+    outcomeBars,
     savedSegmentBars,
     selectedBar,
     selectedRangeBars,

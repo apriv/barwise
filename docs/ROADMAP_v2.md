@@ -193,58 +193,58 @@ source
 **目标：** 加入事后结果标签，为后续统计、相似案例和预测打基础。Outcome 是回看标签，不影响实时标注主流程。
 
 ### 设计
-- [ ] 明确 outcome 挂载对象：
-  - [ ] V2 默认挂在 segment range 上
-  - [ ] 可选 anchor bar：确认 outcome 的那根 bar
-  - [ ] 可选 related context bar：当时判断发生的位置
-- [ ] 定义第一版 outcome tags：
-  - [ ] succeeded
-  - [ ] failed
-  - [ ] continued
-  - [ ] reversed
-  - [ ] evolved_into_range
-  - [ ] evolved_into_channel
-  - [ ] unclear
-- [ ] 定义 outcome 的 source 默认为 `manual`
-- [ ] 更新 `LABEL_DICTIONARY.md` 的 Outcome 章节，从占位变为正式 V2 scope
+- [x] 明确 outcome 挂载对象：
+  - [x] V2 默认挂在 segment range 上
+  - [x] 可选 anchor bar：确认 outcome 的那根 bar
+  - [x] 可选 related context bar：当时判断发生的位置
+- [x] 定义第一版 outcome tags：
+  - [x] succeeded
+  - [x] failed
+  - [x] continued
+  - [x] reversed
+  - [x] evolved_into_range
+  - [x] evolved_into_channel
+  - [x] unclear
+- [x] 定义 outcome 的 source 默认为 `manual`
+- [x] 更新 `LABEL_DICTIONARY.md` 的 Outcome 章节，从占位变为正式 V2 scope
 
 ### 数据模型
-- [ ] 新增 `outcome_tags`
-  - [ ] `id`
-  - [ ] `session_id`
-  - [ ] `start_bar_id`
-  - [ ] `end_bar_id`
-  - [ ] `confirm_bar_id`
-  - [ ] `related_context_bar_id`
-  - [ ] `tag_key`
-  - [ ] `note`
-  - [ ] `source`
-  - [ ] `created_at`
-  - [ ] `updated_at`
-- [ ] 增加索引：
-  - [ ] by session
-  - [ ] by range
-  - [ ] by confirm bar
-  - [ ] by tag key
-- [ ] 写 migration `004_outcome_tags.sql`
-- [ ] 更新 `DATA_MODEL.md`
+- [x] 新增 `outcome_tags`
+  - [x] `id`
+  - [x] `session_id`
+  - [x] `start_bar_id`
+  - [x] `end_bar_id`
+  - [x] `confirm_bar_id`
+  - [x] `related_context_bar_id`
+  - [x] `tag_key`
+  - [x] `note`
+  - [x] `source`
+  - [x] `created_at`
+  - [x] `updated_at`
+- [x] 增加索引：
+  - [x] by session
+  - [x] by range
+  - [x] by confirm bar
+  - [x] by tag key
+- [x] 写 migration `004_outcome_tags.sql`
+- [x] 更新 `DATA_MODEL.md`
 
 ### Repo / Action
-- [ ] `lib/repo/labels.ts` 增加 outcome CRUD
-- [ ] `lib/actions/label.ts` 增加 outcome actions
-- [ ] session 加载时返回 outcome tags
+- [x] `lib/repo/labels.ts` 增加 outcome CRUD
+- [x] `lib/actions/label.ts` 增加 outcome actions
+- [x] session 加载时返回 outcome tags
 
 ### UI
-- [ ] range 选择时允许切换 Segment / Outcome
-- [ ] outcome 表单默认显示在“当天结束后回看”的区域
-- [ ] 选择 outcome 时可指定 confirm bar
-- [ ] 已有 outcome 可回填、修改、删除
-- [ ] 图上显示 outcome marker，但优先级低于当前选择高亮
+- [x] range 选择时允许切换 Segment / Outcome
+- [x] outcome 表单默认显示在“当天结束后回看”的区域
+- [x] 选择 outcome 时可指定 confirm bar
+- [x] 已有 outcome 可回填、修改、删除
+- [x] 图上显示 outcome marker，但优先级低于当前选择高亮
 
 ### 验收
-- 能给一段 breakout / range / leg 补打 outcome
-- 刷新后 outcome 保留
-- outcome 可以用于统计同类 setup 的后续结果
+- [x] 能给一段 breakout / range / leg 补打 outcome
+- [x] 刷新后 outcome 保留
+- [x] outcome 可以用于统计同类 setup 的后续结果
 
 ---
 

@@ -196,23 +196,24 @@ Visible tags：
 
 ---
 
-## D. Outcome Labels（V1 不实现）
+## D. Outcome Labels（V2）
 
 事后回看的结果，例："Bar 42 confirms `failed_bear_breakout` for the segment bar 35–37"。
 
-**V1 不做。** 原因：
-- 数据模型需要 outcome 指回它确认的 segment / context event，关联关系复杂
-- 当天结束后人工补打的工作流尚未确定（一次性扫一天 vs 边走边回填）
-- 没有这一类也能跑通 V1 主流程（导入、显示、bar/segment/context 标注、导出）
-
-V2+ 会加。先列出预期 enum 占位：
+V2 中 outcome 挂在 selected range 上，并可指定确认 outcome 的 bar。第一版 visible tags：
 
 ```
 succeeded / failed / continued / reversed
 evolved_into_range / evolved_into_channel / unclear
 ```
 
-V1 期间想记录类似信息 → 写在被确认的 segment label 的 note 里。
+底层 field：
+
+| field | values |
+|---|---|
+| `result` | `succeeded` / `failed` / `continued` / `reversed` / `evolved_into_range` / `evolved_into_channel` / `unclear` |
+
+默认 `source = manual`。
 
 ---
 

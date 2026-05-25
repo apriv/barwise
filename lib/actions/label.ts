@@ -8,9 +8,11 @@ import { getDb } from "@/lib/db/client";
 import {
   deleteBarTag as deleteBarTagRecord,
   deleteContextTag as deleteContextTagRecord,
+  deleteOutcomeTag as deleteOutcomeTagRecord,
   deleteSegmentTag as deleteSegmentTagRecord,
   upsertBarTag as upsertBarTagRecord,
   upsertContextTag as upsertContextTagRecord,
+  upsertOutcomeTag as upsertOutcomeTagRecord,
   upsertSegmentTag as upsertSegmentTagRecord,
 } from "@/lib/repo/labels";
 
@@ -27,8 +29,12 @@ const segmentTagActionSchema = z.object({
   tagKey: z.string().min(1),
 });
 
+const outcomeTagActionSchema = segmentTagActionSchema.extend({
+  confirmBarId: z.coerce.number().int().positive().optional(),
+});
+
 function assertValidTag(
-  category: "bar" | "context" | "segment",
+  category: "bar" | "context" | "segment" | "outcome",
   tagKey: string,
 ) {
   const row = getDb()
@@ -147,5 +153,44 @@ export async function deleteSegmentTag(formData: FormData) {
   });
 
   deleteSegmentTagRecord(input.startBarId, input.endBarId, input.tagKey);
+  revalidatePath(`/sessions/${input.sessionId}`);
+}
+
+export async function upsertOutcomeTag(formData: FormData) {
+  ensureDatabase();
+
+  const input = outcomeTagActionSchema.parse({
+    sessionId: formData.get("sessionId"),
+    startBarId: formData.get("startBarId"),
+    endBarId: formData.get("endBarId"),
+    confirmBarId: formData.get("confirmBarId") || undefined,
+    tagKey: formData.get("tagKey"),
+  });
+
+  assertValidTag("outcome", input.tagKey);
+
+  upsertOutcomeTagRecord({
+    sessionId: input.sessionId,
+    startBarId: input.startBarId,
+    endBarId: input.endBarId,
+    confirmBarId: input.confirmBarId ?? null,
+    tagKey: input.tagKey,
+    source: "manual",
+  });
+
+  revalidatePath(`/sessions/${input.sessionId}`);
+}
+
+export async function deleteOutcomeTag(formData: FormData) {
+  ensureDatabase();
+
+  const input = segmentTagActionSchema.parse({
+    sessionId: formData.get("sessionId"),
+    startBarId: formData.get("startBarId"),
+    endBarId: formData.get("endBarId"),
+    tagKey: formData.get("tagKey"),
+  });
+
+  deleteOutcomeTagRecord(input.startBarId, input.endBarId, input.tagKey);
   revalidatePath(`/sessions/${input.sessionId}`);
 }

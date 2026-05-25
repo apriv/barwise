@@ -6,6 +6,7 @@ import type {
   BarTagMarker,
   ChartBar,
   ContextTagMarker,
+  OutcomeTagMarker,
   SegmentTagMarker,
 } from "@/components/chart/Chart";
 import { BarKeyboardNav } from "@/components/chart/BarKeyboardNav";
@@ -17,6 +18,7 @@ import { listActiveDictionaryItems } from "@/lib/repo/dictionary";
 import {
   listBarTagsForSession,
   listContextTagsForSession,
+  listOutcomeTagsForSession,
   listSegmentTagsForSession,
 } from "@/lib/repo/labels";
 import { getAdjacentSessions, getSession } from "@/lib/repo/sessions";
@@ -57,9 +59,11 @@ export default async function SessionPage({ params }: PageProps) {
   const barLabelOptions = listActiveDictionaryItems("bar");
   const contextLabelOptions = listActiveDictionaryItems("context");
   const segmentLabelOptions = listActiveDictionaryItems("segment");
+  const outcomeLabelOptions = listActiveDictionaryItems("outcome");
   const barTags = listBarTagsForSession(session.id);
   const contextTags = listContextTagsForSession(session.id);
   const segmentTags = listSegmentTagsForSession(session.id);
+  const outcomeTags = listOutcomeTagsForSession(session.id);
   const barTagMarkers: BarTagMarker[] = Array.from(
     barTags.reduce<Map<number, number>>((counts, tag) => {
       counts.set(tag.bar_number, (counts.get(tag.bar_number) ?? 0) + 1);
@@ -96,6 +100,14 @@ export default async function SessionPage({ params }: PageProps) {
       return markers;
     }, new Map()),
     ([, marker]) => marker,
+  );
+  const outcomeTagMarkers: OutcomeTagMarker[] = Array.from(
+    outcomeTags.reduce<Map<number, number>>((counts, tag) => {
+      const markerBarNumber = tag.confirm_bar_number ?? tag.end_bar_number;
+      counts.set(markerBarNumber, (counts.get(markerBarNumber) ?? 0) + 1);
+      return counts;
+    }, new Map()),
+    ([barNumber, count]) => ({ barNumber, count }),
   );
 
   return (
@@ -150,6 +162,7 @@ export default async function SessionPage({ params }: PageProps) {
             barTagMarkers={barTagMarkers}
             contextTagMarkers={contextTagMarkers}
             segmentTagMarkers={segmentTagMarkers}
+            outcomeTagMarkers={outcomeTagMarkers}
           />
         </div>
       </section>
@@ -160,9 +173,11 @@ export default async function SessionPage({ params }: PageProps) {
           barTags={barTags}
           contextTags={contextTags}
           segmentTags={segmentTags}
+          outcomeTags={outcomeTags}
           barTagOptions={barLabelOptions}
           contextTagOptions={contextLabelOptions}
           segmentTagOptions={segmentLabelOptions}
+          outcomeTagOptions={outcomeLabelOptions}
           sessionId={session.id}
         />
       </aside>
