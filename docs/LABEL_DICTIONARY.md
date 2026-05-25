@@ -1,6 +1,6 @@
 # Label Dictionary
 
-四类标签的字段、tag、note 与底层 field 映射。本文档定义 V1 标注体系的全部内容，是 `DATA_MODEL.md` 中 tag 表的 seed，也是 UI 表单的依据。
+四类标签的字段、tag、note 与底层 field 映射。本文档定义标注体系的全部内容，是 `DATA_MODEL.md` 中 tag 表的 seed，也是 UI 表单的依据。
 
 ---
 
@@ -33,6 +33,28 @@ Note (自由文本，补充无法 enum 化的内容)
 4. **note 是 V1 的兜底**：所有无法 enum 的内容（"多头试图站稳但量能不足"）进 note。
 
 **多选规则：** 每个 tag group（Bar Shape、Bar Pattern、Segment、Context 各子组）都是**多选**。一根 bar 可以同时打 `strong_bull_bar` + `close_near_high` + `follow_through_bar`。
+
+## V2 字典元数据
+
+V2 起，Tag→Field 映射正式落到 `label_dictionary.field_mapping_json`，而不是只存在于文档表格里。字段命名沿用当前代码：
+
+| roadmap 名称 | 数据库字段 |
+|---|---|
+| `tag_key` | `key` |
+| `display_name` | `label` |
+| `active` | `is_active` |
+| `field_mapping_json` | `field_mapping_json` |
+
+示例：
+
+```json
+{
+  "direction": "bull",
+  "body": "strong"
+}
+```
+
+默认 `source = manual`，后续自动规则、NLP、导入和模型建议分别使用 `auto_numeric` / `nlp` / `imported_albrooks` / `model_suggested`。
 
 ---
 

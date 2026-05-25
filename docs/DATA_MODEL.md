@@ -80,26 +80,44 @@ CREATE INDEX idx_bars_session ON bars(session_id, bar_number);
 
 ### `label_dictionary`
 
-Tag 的元数据。**没有 `field` 列**（V1 不直接存 field；底层 field 由映射表 derive）。`group` 标记 tag 在 UI 上的分组归属（bar_shape / bar_pattern / segment / context_market / context_event / context_location）。
+Tag 的元数据。V2 起 `label_dictionary` 是可编辑的标签字典，不再只是 seed lookup。**没有 `field` 列**；底层 field 由 `field_mapping_json` derive。`group_name` 标记 tag 在 UI 上的分组归属（bar_shape / bar_pattern / segment / context_market / context_event / context_location / outcome_result）。
 
 ```sql
 CREATE TABLE label_dictionary (
-  id          INTEGER PRIMARY KEY,
-  category    TEXT NOT NULL,               -- 'bar' | 'segment' | 'context'
-  group_name  TEXT NOT NULL,               -- 'bar_shape' | 'bar_pattern' | 'segment' |
-                                           -- 'context_market' | 'context_event' | 'context_location'
-  key         TEXT NOT NULL,               -- visible tag key, e.g. 'strong_bull_bar'
-  label       TEXT NOT NULL,               -- 显示名
-  description TEXT,
-  sort_order  INTEGER NOT NULL DEFAULT 0,
-  is_active   INTEGER NOT NULL DEFAULT 1,
-  created_at  INTEGER NOT NULL,
-  UNIQUE (category, key)                   -- key 在 category 内全局唯一（跨 group 不会冲突）
+  id                 INTEGER PRIMARY KEY,
+  category           TEXT NOT NULL CHECK (category IN ('bar', 'segment', 'context', 'outcome')),
+  group_name         TEXT NOT NULL,
+  key                TEXT NOT NULL,         -- visible tag key, e.g. 'strong_bull_bar'
+  label              TEXT NOT NULL,         -- display name
+  description        TEXT,
+  example            TEXT,
+  field_mapping_json TEXT NOT NULL DEFAULT '{}',
+  sort_order         INTEGER NOT NULL DEFAULT 0,
+  is_active          INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+  created_by         TEXT NOT NULL DEFAULT 'local',
+  source             TEXT NOT NULL DEFAULT 'manual'
+                       CHECK (source IN ('manual', 'auto_numeric', 'nlp', 'imported_albrooks', 'model_suggested')),
+  created_at         INTEGER NOT NULL,
+  updated_at         INTEGER NOT NULL,
+  UNIQUE (category, key)
 );
 CREATE INDEX idx_dict_cat_group ON label_dictionary(category, group_name, is_active, sort_order);
+CREATE INDEX idx_dict_key ON label_dictionary(key);
+CREATE INDEX idx_dict_source ON label_dictionary(source);
 ```
 
 > ⚠️ `group` 是 SQL 保留字，所以列名用 `group_name`。
+
+`key` / `label` 是当前代码里的正式字段名，对应 roadmap 里的 `tag_key` / `display_name`。`is_active` 对应 roadmap 里的 `active`。
+
+`field_mapping_json` 示例：
+
+```json
+{
+  "direction": "bull",
+  "body": "strong"
+}
+```
 
 完整 tag 列表和 Tag→Field 映射见 [`LABEL_DICTIONARY.md`](./LABEL_DICTIONARY.md)。
 
