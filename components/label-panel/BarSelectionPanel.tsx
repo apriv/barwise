@@ -4,16 +4,25 @@ import { useSearchParams } from "next/navigation";
 import { useMemo, useOptimistic, useTransition } from "react";
 
 import type { ChartBar } from "@/components/chart/Chart";
-import { deleteBarTag, upsertBarTag } from "@/lib/actions/label";
+import {
+  deleteBarTag,
+  deleteContextTag,
+  upsertBarTag,
+  upsertContextTag,
+} from "@/lib/actions/label";
 import type { LabelDictionaryItem } from "@/lib/repo/dictionary";
-import type { BarTagRecord } from "@/lib/repo/labels";
+import type { BarTagRecord, ContextTagRecord } from "@/lib/repo/labels";
 
 type BarSelectionPanelProps = {
   bars: ChartBar[];
-  tags: BarTagRecord[];
-  tagOptions: LabelDictionaryItem[];
+  barTags: BarTagRecord[];
+  contextTags: ContextTagRecord[];
+  barTagOptions: LabelDictionaryItem[];
+  contextTagOptions: LabelDictionaryItem[];
   sessionId: number;
 };
+
+type ToggleAction = (formData: FormData) => Promise<void>;
 
 function formatPrice(value: number) {
   return value.toFixed(2);
@@ -30,6 +39,11 @@ function groupOptions(options: LabelDictionaryItem[]) {
 const groupLabels: Record<string, string> = {
   bar_quality: "Bar Quality",
   bar_role: "Bar Role",
+  market_context: "Market Context",
+  trend_direction: "Trend Direction",
+  current_location: "Current Location",
+  current_event: "Current Event",
+  trade_quality: "Trade Quality",
 };
 
 function formatGroupName(groupName: string) {
@@ -42,12 +56,16 @@ function TagGroup({
   sessionId,
   barId,
   selectedTags,
+  upsertAction,
+  deleteAction,
 }: {
   groupName: string;
   options: LabelDictionaryItem[];
   sessionId: number;
   barId: number;
   selectedTags: Set<string>;
+  upsertAction: ToggleAction;
+  deleteAction: ToggleAction;
 }) {
   const [optimisticTags, toggleOptimisticTag] = useOptimistic(
     selectedTags,
@@ -82,10 +100,10 @@ function TagGroup({
       try {
         if (isSelected) {
           formData.set("tagKey", tagKey);
-          await deleteBarTag(formData);
+          await deleteAction(formData);
         } else {
           formData.set("tagKey", tagKey);
-          await upsertBarTag(formData);
+          await upsertAction(formData);
         }
       } catch (err) {
         console.error("Tag update failed", err);
@@ -132,8 +150,10 @@ function TagGroup({
 
 export function BarSelectionPanel({
   bars,
-  tags,
-  tagOptions,
+  barTags,
+  contextTags,
+  barTagOptions,
+  contextTagOptions,
   sessionId,
 }: BarSelectionPanelProps) {
   const searchParams = useSearchParams();
@@ -144,19 +164,33 @@ export function BarSelectionPanel({
     return bars.find((bar) => bar.barNumber === selectedBarNumber) ?? null;
   }, [bars, selectedBarNumber]);
 
-  const optionsByField = useMemo(
-    () => groupOptions(tagOptions),
-    [tagOptions],
+  const barOptionsByGroup = useMemo(
+    () => groupOptions(barTagOptions),
+    [barTagOptions],
   );
 
-  const selectedTagsSet = useMemo(() => {
+  const contextOptionsByGroup = useMemo(
+    () => groupOptions(contextTagOptions),
+    [contextTagOptions],
+  );
+
+  const selectedBarTagsSet = useMemo(() => {
     if (!selectedBar) return new Set<string>();
     return new Set(
-      tags
+      barTags
         .filter((tag) => tag.bar_id === selectedBar.id)
         .map((tag) => tag.tag_key),
     );
-  }, [tags, selectedBar]);
+  }, [barTags, selectedBar]);
+
+  const selectedContextTagsSet = useMemo(() => {
+    if (!selectedBar) return new Set<string>();
+    return new Set(
+      contextTags
+        .filter((tag) => tag.bar_id === selectedBar.id)
+        .map((tag) => tag.tag_key),
+    );
+  }, [contextTags, selectedBar]);
 
   if (!selectedBar) {
     return (
@@ -196,16 +230,41 @@ export function BarSelectionPanel({
       </dl>
 
       <div className="space-y-5">
-        {Object.entries(optionsByField).map(([groupName, options]) => (
-          <TagGroup
-            key={`${selectedBar.id}:${groupName}`}
-            groupName={groupName}
-            options={options}
-            sessionId={sessionId}
-            barId={selectedBar.id}
-            selectedTags={selectedTagsSet}
-          />
-        ))}
+        <section className="space-y-3">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            Bar Tags
+          </h3>
+          {Object.entries(barOptionsByGroup).map(([groupName, options]) => (
+            <TagGroup
+              key={`${selectedBar.id}:bar:${groupName}`}
+              groupName={groupName}
+              options={options}
+              sessionId={sessionId}
+              barId={selectedBar.id}
+              selectedTags={selectedBarTagsSet}
+              upsertAction={upsertBarTag}
+              deleteAction={deleteBarTag}
+            />
+          ))}
+        </section>
+
+        <section className="space-y-3">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+            Context Tags
+          </h3>
+          {Object.entries(contextOptionsByGroup).map(([groupName, options]) => (
+            <TagGroup
+              key={`${selectedBar.id}:context:${groupName}`}
+              groupName={groupName}
+              options={options}
+              sessionId={sessionId}
+              barId={selectedBar.id}
+              selectedTags={selectedContextTagsSet}
+              upsertAction={upsertContextTag}
+              deleteAction={deleteContextTag}
+            />
+          ))}
+        </section>
       </div>
     </div>
   );

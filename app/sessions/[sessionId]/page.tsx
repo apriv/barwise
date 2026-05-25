@@ -9,7 +9,10 @@ import { BarSelectionPanel } from "@/components/label-panel/BarSelectionPanel";
 import { ensureLocalEsRthData } from "@/lib/data/local-es";
 import { listBarsForSession } from "@/lib/repo/bars";
 import { listActiveDictionaryItems } from "@/lib/repo/dictionary";
-import { listBarTagsForSession } from "@/lib/repo/labels";
+import {
+  listBarTagsForSession,
+  listContextTagsForSession,
+} from "@/lib/repo/labels";
 import { getAdjacentSessions, getSession } from "@/lib/repo/sessions";
 
 type PageProps = {
@@ -46,7 +49,9 @@ export default async function SessionPage({ params }: PageProps) {
     volume: bar.volume,
   }));
   const barLabelOptions = listActiveDictionaryItems("bar");
+  const contextLabelOptions = listActiveDictionaryItems("context");
   const barTags = listBarTagsForSession(session.id);
+  const contextTags = listContextTagsForSession(session.id);
 
   return (
     <main className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_360px]">
@@ -102,8 +107,10 @@ export default async function SessionPage({ params }: PageProps) {
       <aside className="min-h-0 border-l border-zinc-900 bg-zinc-950 p-5">
         <BarSelectionPanel
           bars={bars}
-          tags={barTags}
-          tagOptions={barLabelOptions}
+          barTags={barTags}
+          contextTags={contextTags}
+          barTagOptions={barLabelOptions}
+          contextTagOptions={contextLabelOptions}
           sessionId={session.id}
         />
       </aside>

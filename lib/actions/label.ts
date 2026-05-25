@@ -7,37 +7,32 @@ import { ensureDatabase } from "@/lib/db/ensure";
 import { getDb } from "@/lib/db/client";
 import {
   deleteBarTag as deleteBarTagRecord,
+  deleteContextTag as deleteContextTagRecord,
   upsertBarTag as upsertBarTagRecord,
+  upsertContextTag as upsertContextTagRecord,
 } from "@/lib/repo/labels";
 
-// M3 Tag Model - New schemas for bar_tags
-const barTagActionSchema = z.object({
+const tagActionSchema = z.object({
   sessionId: z.coerce.number().int().positive(),
   barId: z.coerce.number().int().positive(),
   tagKey: z.string().min(1),
 });
 
-const deleteBarTagActionSchema = z.object({
-  sessionId: z.coerce.number().int().positive(),
-  barId: z.coerce.number().int().positive(),
-  tagKey: z.string().min(1),
-});
-
-function assertValidBarTag(tagKey: string) {
+function assertValidTag(category: "bar" | "context", tagKey: string) {
   const row = getDb()
     .prepare(
       `
       SELECT 1
       FROM label_dictionary
-      WHERE category = 'bar'
+      WHERE category = ?
         AND key = ?
         AND is_active = 1
     `,
     )
-    .get(tagKey);
+    .get(category, tagKey);
 
   if (!row) {
-    throw new Error(`Invalid bar tag: ${tagKey}`);
+    throw new Error(`Invalid ${category} tag: ${tagKey}`);
   }
 }
 
@@ -45,13 +40,13 @@ function assertValidBarTag(tagKey: string) {
 export async function upsertBarTag(formData: FormData) {
   ensureDatabase();
 
-  const input = barTagActionSchema.parse({
+  const input = tagActionSchema.parse({
     sessionId: formData.get("sessionId"),
     barId: formData.get("barId"),
     tagKey: formData.get("tagKey"),
   });
 
-  assertValidBarTag(input.tagKey);
+  assertValidTag("bar", input.tagKey);
 
   upsertBarTagRecord({
     barId: input.barId,
@@ -65,12 +60,44 @@ export async function upsertBarTag(formData: FormData) {
 export async function deleteBarTag(formData: FormData) {
   ensureDatabase();
 
-  const input = deleteBarTagActionSchema.parse({
+  const input = tagActionSchema.parse({
     sessionId: formData.get("sessionId"),
     barId: formData.get("barId"),
     tagKey: formData.get("tagKey"),
   });
 
   deleteBarTagRecord(input.barId, input.tagKey);
+  revalidatePath(`/sessions/${input.sessionId}`);
+}
+
+export async function upsertContextTag(formData: FormData) {
+  ensureDatabase();
+
+  const input = tagActionSchema.parse({
+    sessionId: formData.get("sessionId"),
+    barId: formData.get("barId"),
+    tagKey: formData.get("tagKey"),
+  });
+
+  assertValidTag("context", input.tagKey);
+
+  upsertContextTagRecord({
+    barId: input.barId,
+    tagKey: input.tagKey,
+  });
+
+  revalidatePath(`/sessions/${input.sessionId}`);
+}
+
+export async function deleteContextTag(formData: FormData) {
+  ensureDatabase();
+
+  const input = tagActionSchema.parse({
+    sessionId: formData.get("sessionId"),
+    barId: formData.get("barId"),
+    tagKey: formData.get("tagKey"),
+  });
+
+  deleteContextTagRecord(input.barId, input.tagKey);
   revalidatePath(`/sessions/${input.sessionId}`);
 }

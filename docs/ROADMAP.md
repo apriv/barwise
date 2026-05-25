@@ -127,10 +127,12 @@
 
 ### 任务
 - [ ] 图表支持选择 bar range，选择合理的方式(拖动/control/shift)
-- [ ] 单根 bar 支持 Bar / Context 两组多 tag 表单
+- [x] 单根 bar 支持 Bar / Context 两组多 tag 表单
 - [ ] 多根 range 支持 Segment 多 tag 表单
-- [ ] `lib/repo/labels.ts` 增加 segment_tags / context_tags CRUD
-- [ ] `lib/actions/label.ts` 增加 segment / context actions
+- [ ] `lib/repo/labels.ts` 增加 segment_tags CRUD
+- [x] `lib/repo/labels.ts` 增加 context_tags CRUD
+- [ ] `lib/actions/label.ts` 增加 segment actions
+- [x] `lib/actions/label.ts` 增加 context actions
 - [ ] 右侧 panel 根据选择类型切换：
   - 单 bar：Bar / Context
   - range：Segment
