@@ -35,9 +35,15 @@ export type SegmentTagMarker = {
   count: number;
 };
 
+export type ContextTagMarker = {
+  barNumber: number;
+  count: number;
+};
+
 type ChartProps = {
   bars: ChartBar[];
   barTagMarkers?: BarTagMarker[];
+  contextTagMarkers?: ContextTagMarker[];
   segmentTagMarkers?: SegmentTagMarker[];
   selectedBarNumber?: number | null;
   selectedRange?: { start: number; end: number } | null;
@@ -51,6 +57,7 @@ function formatPrice(value: number) {
 export function Chart({
   bars,
   barTagMarkers = [],
+  contextTagMarkers = [],
   segmentTagMarkers = [],
   selectedBarNumber,
   selectedRange,
@@ -95,6 +102,19 @@ export function Chart({
       }))
       .filter((marker) => marker.count > 0);
   }, [bars, barTagMarkers]);
+
+  const contextBars = useMemo(() => {
+    const countsByBarNumber = new Map(
+      contextTagMarkers.map((marker) => [marker.barNumber, marker.count]),
+    );
+
+    return bars
+      .map((bar) => ({
+        bar,
+        count: countsByBarNumber.get(bar.barNumber) ?? 0,
+      }))
+      .filter((marker) => marker.count > 0);
+  }, [bars, contextTagMarkers]);
 
   const savedSegmentBars = useMemo(() => {
     return segmentTagMarkers.flatMap((segment, segmentIndex) => {
@@ -226,6 +246,20 @@ export function Chart({
 
     markers.push(...savedSegmentMarkers);
 
+    const contextMarkers: SeriesMarker<Time>[] = contextBars.map(
+      ({ bar, count }) => ({
+        id: `context-tags-${bar.id}`,
+        time: bar.time as UTCTimestamp,
+        position: "belowBar",
+        shape: "arrowUp",
+        color: "#f59e0b",
+        text: count > 1 ? String(count) : undefined,
+        size: 0.72,
+      }),
+    );
+
+    markers.push(...contextMarkers);
+
     const rangeMarkers: SeriesMarker<Time>[] = selectedRangeBars.map((bar, index) => {
       const isEdge =
         index === 0 || index === selectedRangeBars.length - 1;
@@ -261,7 +295,13 @@ export function Chart({
     }
 
     markerApi.setMarkers(markers);
-  }, [labeledBars, savedSegmentBars, selectedBar, selectedRangeBars]);
+  }, [
+    contextBars,
+    labeledBars,
+    savedSegmentBars,
+    selectedBar,
+    selectedRangeBars,
+  ]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">

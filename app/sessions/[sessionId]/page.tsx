@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import type {
   BarTagMarker,
   ChartBar,
+  ContextTagMarker,
   SegmentTagMarker,
 } from "@/components/chart/Chart";
 import { BarKeyboardNav } from "@/components/chart/BarKeyboardNav";
@@ -61,6 +62,13 @@ export default async function SessionPage({ params }: PageProps) {
   const segmentTags = listSegmentTagsForSession(session.id);
   const barTagMarkers: BarTagMarker[] = Array.from(
     barTags.reduce<Map<number, number>>((counts, tag) => {
+      counts.set(tag.bar_number, (counts.get(tag.bar_number) ?? 0) + 1);
+      return counts;
+    }, new Map()),
+    ([barNumber, count]) => ({ barNumber, count }),
+  );
+  const contextTagMarkers: ContextTagMarker[] = Array.from(
+    contextTags.reduce<Map<number, number>>((counts, tag) => {
       counts.set(tag.bar_number, (counts.get(tag.bar_number) ?? 0) + 1);
       return counts;
     }, new Map()),
@@ -140,6 +148,7 @@ export default async function SessionPage({ params }: PageProps) {
           <SelectableChart
             bars={bars}
             barTagMarkers={barTagMarkers}
+            contextTagMarkers={contextTagMarkers}
             segmentTagMarkers={segmentTagMarkers}
           />
         </div>
