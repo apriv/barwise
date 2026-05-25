@@ -102,15 +102,22 @@ export type UpsertBarLabelInput = {
 // Deprecated: Use listBarTagsForSession instead
 export function listBarLabelsForSession(sessionId: number, db?: Database) {
   // Return empty array since bar_labels table no longer exists
+  void sessionId;
+  void db;
   return [] as BarLabelRecord[];
 }
 
 // Deprecated: Use upsertBarTag instead
 export function upsertBarLabel(input: UpsertBarLabelInput, db?: Database) {
   // No-op, bar_labels table no longer exists
+  void input;
+  void db;
 }
 
 // Deprecated: Use deleteBarTag instead
 export function deleteBarLabel(barId: number, field: string, db?: Database) {
   // No-op, bar_labels table no longer exists
+  void barId;
+  void field;
+  void db;
 }

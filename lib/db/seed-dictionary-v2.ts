@@ -1,6 +1,3 @@
-import Database from "better-sqlite3";
-import path from "path";
-import { fileURLToPath } from "url";
 import { getDb } from "@/lib/db/client";
 
 export function seedDictionary() {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useTransition } from "react";
 
 import type { ChartBar } from "@/components/chart/Chart";
 import { deleteBarTag, upsertBarTag } from "@/lib/actions/label";
