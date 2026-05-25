@@ -10,6 +10,7 @@ import {
   renameDictionaryKey,
   setDictionaryItemActive,
   upsertDictionaryItem,
+  deleteDictionaryItem,
 } from "@/lib/repo/dictionary";
 
 const categorySchema = z.enum(["bar", "segment", "context", "outcome"]);
@@ -28,6 +29,8 @@ const tagKeySchema = z
   .regex(/^[a-z0-9_]+$/, "Use lowercase letters, numbers, and underscores.");
 
 const tagFormSchema = z.object({
+  originalCategory: categorySchema.optional(),
+  originalKey: tagKeySchema.optional(),
   category: categorySchema,
   key: tagKeySchema,
   groupName: z.string().trim().min(1),
@@ -62,6 +65,8 @@ export async function saveDictionaryItem(formData: FormData) {
   ensureDatabase();
 
   const input = tagFormSchema.parse({
+    originalCategory: formData.get("originalCategory") || undefined,
+    originalKey: formData.get("originalKey") || undefined,
     category: formData.get("category"),
     key: formData.get("key"),
     groupName: formData.get("groupName"),
@@ -73,17 +78,22 @@ export async function saveDictionaryItem(formData: FormData) {
     isActive: formData.get("isActive") === "on",
     source: formData.get("source") || "manual",
   });
+  const category = input.originalCategory ?? input.category;
+  const key = input.originalKey ?? input.key;
 
   upsertDictionaryItem({
     ...input,
+    category,
+    key,
     description: input.description || null,
     example: input.example || null,
     fieldMappingJson: cleanJson(input.fieldMappingJson),
   });
 
   revalidatePath("/tags");
-  revalidatePath(`/tags/${input.key}`);
-  redirect(`/tags/${input.key}?category=${input.category}`);
+  revalidatePath("/tags/dashboard");
+  revalidatePath(`/tags/${key}`);
+  redirect(`/tags/${key}?category=${category}`);
 }
 
 export async function setDictionaryItemActiveFromForm(formData: FormData) {
@@ -98,6 +108,7 @@ export async function setDictionaryItemActiveFromForm(formData: FormData) {
   setDictionaryItemActive(input.category, input.key, input.isActive === "1");
 
   revalidatePath("/tags");
+  revalidatePath("/tags/dashboard");
   revalidatePath(`/tags/${input.key}`);
 }
 
@@ -115,7 +126,43 @@ export async function renameDictionaryKeyFromForm(formData: FormData) {
   }
 
   revalidatePath("/tags");
+  revalidatePath("/tags/dashboard");
   revalidatePath(`/tags/${input.oldKey}`);
   revalidatePath(`/tags/${input.newKey}`);
   redirect(`/tags/${input.newKey}?category=${input.category}`);
+}
+
+const batchOperationSchema = z.object({
+  action: z.enum(["enable", "disable", "delete"]),
+  items: z.array(
+    z.object({
+      category: categorySchema,
+      key: tagKeySchema,
+    }),
+  ),
+});
+
+export async function batchDictionaryOperation(formData: FormData) {
+  ensureDatabase();
+
+  const actionStr = formData.get("action");
+  const itemsStr = formData.get("items");
+
+  const input = batchOperationSchema.parse({
+    action: actionStr,
+    items: itemsStr ? JSON.parse(itemsStr as string) : [],
+  });
+
+  for (const item of input.items) {
+    if (input.action === "enable") {
+      setDictionaryItemActive(item.category, item.key, true);
+    } else if (input.action === "disable") {
+      setDictionaryItemActive(item.category, item.key, false);
+    } else if (input.action === "delete") {
+      deleteDictionaryItem(item.category, item.key);
+    }
+  }
+
+  revalidatePath("/tags");
+  revalidatePath("/tags/dashboard");
 }

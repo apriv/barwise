@@ -604,3 +604,19 @@ export function renameDictionaryKey(
       }
     })();
 }
+
+export function deleteDictionaryItem(
+  category: LabelCategory,
+  key: string,
+  db?: Database,
+) {
+  database(db)
+    .prepare(
+      `
+      DELETE FROM label_dictionary
+      WHERE category = ?
+        AND key = ?
+    `,
+    )
+    .run(category, key);
+}

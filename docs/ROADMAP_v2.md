@@ -23,6 +23,8 @@ V4 — Learning / Prediction Assistant
 调整 tag 排序
 修改 tag → field 映射
 标记 tag 是否 active
+- [x] tag列表多选
+- [x] 批量操作（enable, disable, delete）
 2. tag → field 映射正式落地
 strong_bull_close
 映射
@@ -141,7 +143,9 @@ source
 
 ### 页面
 - [x] 新增 `/tags`
+- [x] 新增 `/tags/new`
 - [x] 新增 `/tags/[tagKey]`
+- [x] 新增 `/tags/dashboard`
 
 ### `/tags` 列表
 - [ ] 按 `category` 分 tab：Bar / Segment / Context / Outcome
@@ -156,11 +160,13 @@ source
 - [ ] 支持组内排序调整
 - [x] 支持快速停用 / 恢复
 - [x] 支持新增 tag
+- [x] 新增 tag 独立到 `/tags/new`，不混在列表页
+- [x] 支持从列表明确进入已有 tag 编辑
 
 ### `/tags/[tagKey]` 详情
 - [x] 展示 tag 基本信息
-- [x] 可编辑 display name
-- [x] 可编辑 category / group_name
+- [x] 可编辑已有 tag metadata：display name / group_name / description / example / mapping / source / sort order / active
+- [ ] 可迁移已有 tag 的 category（暂不做；会影响历史标注所在表）
 - [x] 可编辑 description / example
 - [x] 可编辑 `field_mapping_json`
 - [x] 可编辑 source
@@ -180,9 +186,11 @@ source
 - [x] deactivate 优先于 delete
 - [ ] rename key 必须显示影响范围和确认
 - [x] 保存 mapping 前先做 JSON 校验
+- [x] 编辑已有 tag 时 category 只读，避免历史 `bar_tags` / `segment_tags` / `context_tags` / `outcome_tags` 断开 join
 
 ### 验收
 - [x] 可以不改代码新增一个 tag，并立刻在标注面板可用
+- [x] 可以从列表进入已有 tag 编辑页并保存 metadata
 - [x] 可以停用 tag，历史标注仍显示但不能继续新增
 - [x] 可以查看某个 tag 为什么存在、怎么映射、用了多少次
 
@@ -267,9 +275,9 @@ source
 - [x] 统计几乎不用的 tag
 
 ### UI
-- [x] `/tags` 增加 stats view
+- [x] `/tags/dashboard` 增加 stats view
 - [x] Tag 详情页显示 usage trend
-- [x] 分组页显示“建议整理”列表：
+- [x] 看板页显示“建议整理”列表：
   - [x] too common
   - [x] rarely used
   - [x] duplicate mapping
@@ -318,7 +326,7 @@ source
 - [ ] Trading Range 框
 - [ ] trend / channel 线
 - [ ] double top / double bottom 线
-- [ ] entry bar 箭头
+- [ ] entry bar ：如果是阳线，在下方画绿色向上箭头，表示是做多信号；阴线反之。
 - [ ] breakout / failed breakout marker
 - [ ] outcome marker
 
@@ -365,6 +373,7 @@ source
 - [ ] 更新 `UI_DESIGN.md`
 - [ ] 更新 `PROJECT_DESIGN.md` / `ARCHITECTURE.md` 中与标签系统相关的描述
 - [ ] 在 `ROADMAP_v2.md` 勾选实际完成项
+- [x] 删除旧 demo 页面和导航入口
 
 ### 验收
 - V2 完成后，可以在本地 ES 5m 图上维护标签体系、继续高效标注，并看到关键结构的轻量图上表达
