@@ -154,7 +154,7 @@ export default async function SessionPage({ params }: PageProps) {
         </div>
       </section>
 
-      <aside className="min-h-0 border-l border-zinc-900 bg-zinc-950 p-5">
+      <aside className="min-h-0 overflow-y-auto border-l border-zinc-900 bg-zinc-950 p-5">
         <BarSelectionPanel
           bars={bars}
           barTags={barTags}
