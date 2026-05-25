@@ -133,22 +133,22 @@
 - [x] `lib/repo/labels.ts` 增加 context_tags CRUD
 - [x] `lib/actions/label.ts` 增加 segment actions
 - [x] `lib/actions/label.ts` 增加 context actions
-- [ ] 右侧 panel 根据选择类型切换：
+- [x] 右侧 panel 根据选择类型切换：
   - [x] 单 bar：Bar / Context
   - [x] range：Segment
-  - 同时优化UI tag选择有大分类和小选项，更容易选择，而不是全都连在一起
+  - [x] 同时优化 UI tag 选择有大分类和小选项，更容易选择，而不是全都连在一起
 - [x] Bar tag 选择 UI：按大类分组，使用紧凑小选项，并提供即时选中反馈
-- [ ] 已有标注可回填、修改、删除
+- [x] 已有标注可回填、修改、删除（segment 当前按完全相同 start/end range 回填）
 
 ### 不做
 - 图上复杂显示
 - JSON/JSONL 导出
 
 ### 验收
-- 拖动选择多根 K 线后能保存 segment label
-- 单根 bar 能同时保存 bar labels 和 context labels
-- 已有 segment / context / outcome 能回填、修改、删除
-- 切换 bar 或 range 不丢已保存数据
+- Shift-click 选择多根 K 线后能保存 segment label ✅
+- 单根 bar 能同时保存 bar labels 和 context labels ✅
+- 已有 segment / context 能回填、修改、删除 ✅
+- 切换 bar 或 range 不丢已保存数据 ✅
 
 ---
 
@@ -170,6 +170,7 @@
   - [ ] bar label：bar 上方 dot / badge
   - [ ] segment label：横向 band / line
   - [ ] context label：bar 下方 marker 或侧栏摘要
+  - segment 的回填现在只有完全对应的 segment 会显示；后续需要显示/提示相交 segment
 
 ### 不做
 - 新增标注数据类型
