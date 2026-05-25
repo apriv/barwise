@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
 import { TopNav } from "@/components/ui/TopNav";
 
@@ -28,12 +27,9 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
     >
       <body className="flex h-full flex-col bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-200">
-        <Script id="barwise-theme" strategy="beforeInteractive">
-          {`try{var t=localStorage.getItem('barwise-theme')||'dark';document.documentElement.classList.toggle('dark',t==='dark')}catch(e){document.documentElement.classList.add('dark')}`}
-        </Script>
         <TopNav />
         <div className="flex min-h-0 flex-1 flex-col">{children}</div>
       </body>

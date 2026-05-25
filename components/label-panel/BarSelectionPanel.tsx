@@ -11,7 +11,6 @@ import {
 
 import type { ChartBar } from "@/components/chart/Chart";
 import {
-  clearAllSessionTags,
   deleteBarTag,
   deleteContextTag,
   deleteOutcomeTag,
@@ -451,13 +450,6 @@ export function BarSelectionPanel({
       ...segmentFormFields,
       confirmBarId: effectiveConfirmBarId,
     };
-
-    const totalTags = selectedRange && (
-      Array.from(segmentOptionsByGroup).flatMap(([, options]) => options)
-        .filter((opt) => selectedSegmentTagsSet.has(opt.key)).length +
-      Array.from(outcomeOptionsByGroup).flatMap(([, options]) => options)
-        .filter((opt) => selectedOutcomeTagsSet.has(opt.key)).length
-    );
 
     return (
       <div className="space-y-5">

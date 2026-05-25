@@ -12,7 +12,7 @@ import type {
 import { BarKeyboardNav } from "@/components/chart/BarKeyboardNav";
 import { SelectableChart } from "@/components/chart/SelectableChart";
 import { BarSelectionPanel } from "@/components/label-panel/BarSelectionPanel";
-import { clearAllSessionTags } from "@/lib/actions/label";
+import { ClearSessionTagsForm } from "@/components/label-panel/ClearSessionTagsForm";
 import { ensureLocalEsRthData } from "@/lib/data/local-es";
 import { listBarsForSession } from "@/lib/repo/bars";
 import { listActiveDictionaryItems } from "@/lib/repo/dictionary";
@@ -110,6 +110,11 @@ export default async function SessionPage({ params }: PageProps) {
     }, new Map()),
     ([barNumber, count]) => ({ barNumber, count }),
   );
+  const totalTags =
+    barTags.length +
+    contextTags.length +
+    segmentTags.length +
+    outcomeTags.length;
 
   return (
     <main className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_360px]">
@@ -149,37 +154,7 @@ export default async function SessionPage({ params }: PageProps) {
                 Next
               </span>
             )}
-            <form
-              action={clearAllSessionTags}
-              onSubmit={(e) => {
-                const totalTags = (
-                  barTags.length +
-                  contextTags.length +
-                  segmentTags.length +
-                  outcomeTags.length
-                );
-                if (totalTags === 0) {
-                  e.preventDefault();
-                  return;
-                }
-                if (
-                  !confirm(
-                    `Clear all ${totalTags} tag(s) in this session? This cannot be undone.`,
-                  )
-                ) {
-                  e.preventDefault();
-                }
-              }}
-              className="inline"
-            >
-              <input type="hidden" name="sessionId" value={session.id} />
-              <button
-                type="submit"
-                className="rounded bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600"
-              >
-                Clear All Tags
-              </button>
-            </form>
+            <ClearSessionTagsForm sessionId={session.id} totalTags={totalTags} />
             <Link
               href="/sessions"
               className="rounded border border-zinc-300 px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"

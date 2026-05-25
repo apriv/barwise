@@ -175,10 +175,8 @@ export async function getTagsUsageForBatchDelete(
 
   const usage: { [key: string]: number } = {};
   for (const item of items) {
-    const count = countTagUsage(
-      item.category as any,
-      item.key,
-    );
+    const category = categorySchema.parse(item.category);
+    const count = countTagUsage(category, item.key);
     usage[`${item.category}:${item.key}`] = count;
   }
 

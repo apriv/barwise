@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 const storageKey = "barwise-theme";
 
@@ -31,6 +31,13 @@ export function ThemeToggle() {
     getThemeSnapshot,
     () => "dark",
   );
+
+  useEffect(() => {
+    const storedTheme = window.localStorage.getItem(storageKey);
+    if (storedTheme === "dark" || storedTheme === "light") {
+      applyTheme(storedTheme);
+    }
+  }, []);
 
   function toggleTheme() {
     const nextTheme = theme === "dark" ? "light" : "dark";
