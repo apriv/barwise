@@ -269,9 +269,9 @@ export function Chart({
         time: bar.time as UTCTimestamp,
         position: "belowBar",
         shape: "circle",
-        color: "#52525b",
+        color: "#71717a",
         text: String(bar.barNumber),
-        size: 0.16,
+        size: 0,
       }));
 
       markers.push(
