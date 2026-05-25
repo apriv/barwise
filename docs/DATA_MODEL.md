@@ -2,6 +2,8 @@
 
 SQLite 单文件，存放在 `./data/barwise.db`。所有表用 `INTEGER PRIMARY KEY`（即 rowid），时间戳统一存 **Unix epoch 秒（UTC）**，避免时区歧义。
 
+V1 采用 **tag-only 多 tag** 存储模式（M3 决定）。每个标注实体（bar / segment / context anchor）可挂多个 tag，每个 tag 一行。底层 field 不直接存储，由 [`LABEL_DICTIONARY.md`](./LABEL_DICTIONARY.md) 的 Tag→Field 映射表派生。
+
 ---
 
 ## ER 概览
@@ -9,12 +11,14 @@ SQLite 单文件，存放在 `./data/barwise.db`。所有表用 `INTEGER PRIMARY
 ```
 instruments ──< sessions ──< bars
                                 │
-                                ├──< bar_labels       (per-bar)
-                                ├──< segment_labels   (range: start_bar..end_bar)
-                                └──< context_labels   (anchored at one bar)
+                                ├──< bar_tags       (per-bar; 多 tag)
+                                ├──< segment_tags   (per-range; 多 tag)
+                                └──< context_tags   (per-bar 锚点；多 tag)
 
-label_dictionary  (独立表，被三类 label 表通过 (category, key, value) 引用)
+label_dictionary  (独立表；tag key 的元数据：category, group, label, description, sort_order, is_active)
 ```
+
+V2 计划新增 `outcome_tags` 关联 `segment_id` / `context_anchor_bar_id`。当前不实现。
 
 ---
 
@@ -37,7 +41,7 @@ CREATE TABLE instruments (
 
 ### `sessions`
 
-一个交易日一行。V1 当前默认从本地 `data/samples/es_5m.csv` 读取数据，并只切 `RTH` session；之后需要时可再加 ETH / DAY 视图。具体见 [`IMPORT_EXPORT.md`](./IMPORT_EXPORT.md)。
+一个交易日一行。V1 当前默认从本地 `data/samples/es_5m.csv` 读取数据，并只切 `RTH` session。
 
 ```sql
 CREATE TABLE sessions (
@@ -45,11 +49,11 @@ CREATE TABLE sessions (
   instrument_id INTEGER NOT NULL REFERENCES instruments(id),
   session_date  TEXT NOT NULL,             -- 'YYYY-MM-DD'（local trading date）
   session_type  TEXT NOT NULL,             -- 'DAY' | 'RTH' | 'ETH'
-  start_ts      INTEGER NOT NULL,          -- Unix sec, UTC, 第一根 bar 的开盘
-  end_ts        INTEGER NOT NULL,          -- 最后一根 bar 的开盘
+  start_ts      INTEGER NOT NULL,
+  end_ts        INTEGER NOT NULL,
   bar_count     INTEGER NOT NULL,
   imported_at   INTEGER NOT NULL,
-  source_file   TEXT,                      -- 原始 CSV 文件名
+  source_file   TEXT,
   UNIQUE (instrument_id, session_date, session_type)
 );
 CREATE INDEX idx_sessions_date ON sessions(session_date DESC);
@@ -57,19 +61,17 @@ CREATE INDEX idx_sessions_date ON sessions(session_date DESC);
 
 ### `bars`
 
-5 分钟 OHLC，`bar_number` 在 session 内从 1 开始递增（V1 用户的标注语言用 bar number 而不是 timestamp）。
-
 ```sql
 CREATE TABLE bars (
   id          INTEGER PRIMARY KEY,
   session_id  INTEGER NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
-  bar_number  INTEGER NOT NULL,            -- 1-based, session 内
-  ts          INTEGER NOT NULL,            -- Unix sec, UTC, bar 开盘
+  bar_number  INTEGER NOT NULL,
+  ts          INTEGER NOT NULL,
   open        REAL NOT NULL,
   high        REAL NOT NULL,
   low         REAL NOT NULL,
   close       REAL NOT NULL,
-  volume      INTEGER,                     -- 可空（部分 CSV 没有）
+  volume      INTEGER,
   UNIQUE (session_id, bar_number),
   UNIQUE (session_id, ts)
 );
@@ -78,86 +80,86 @@ CREATE INDEX idx_bars_session ON bars(session_id, bar_number);
 
 ### `label_dictionary`
 
-**字典是数据，不是代码**。用户可以增、改名、停用条目。三类 label 表的 `value` 字段都是软引用字典里的 `key`——重命名 key 时用 Server Action 同步更新引用（见下方"演化"）。
+Tag 的元数据。**没有 `field` 列**（V1 不直接存 field；底层 field 由映射表 derive）。`group` 标记 tag 在 UI 上的分组归属（bar_shape / bar_pattern / segment / context_market / context_event / context_location）。
 
 ```sql
 CREATE TABLE label_dictionary (
   id          INTEGER PRIMARY KEY,
   category    TEXT NOT NULL,               -- 'bar' | 'segment' | 'context'
-  field       TEXT NOT NULL,               -- 例 'bar_quality', 'current_event'
-  key         TEXT NOT NULL,               -- 例 'strong_bull_bar'
-  label       TEXT NOT NULL,               -- 显示名，可中文
-  description TEXT,                        -- 详细说明，悬浮提示用
+  group_name  TEXT NOT NULL,               -- 'bar_shape' | 'bar_pattern' | 'segment' |
+                                           -- 'context_market' | 'context_event' | 'context_location'
+  key         TEXT NOT NULL,               -- visible tag key, e.g. 'strong_bull_bar'
+  label       TEXT NOT NULL,               -- 显示名
+  description TEXT,
   sort_order  INTEGER NOT NULL DEFAULT 0,
-  is_active   INTEGER NOT NULL DEFAULT 1,  -- 0 = 软删除
+  is_active   INTEGER NOT NULL DEFAULT 1,
   created_at  INTEGER NOT NULL,
-  UNIQUE (category, field, key)
+  UNIQUE (category, key)                   -- key 在 category 内全局唯一（跨 group 不会冲突）
 );
-CREATE INDEX idx_dict_cat_field ON label_dictionary(category, field, is_active);
+CREATE INDEX idx_dict_cat_group ON label_dictionary(category, group_name, is_active, sort_order);
 ```
 
-完整字段/枚举见 [`LABEL_DICTIONARY.md`](./LABEL_DICTIONARY.md)。
+> ⚠️ `group` 是 SQL 保留字，所以列名用 `group_name`。
 
-### `bar_labels`
+完整 tag 列表和 Tag→Field 映射见 [`LABEL_DICTIONARY.md`](./LABEL_DICTIONARY.md)。
 
-一根 bar 可以有多条 label（不同 field）。同 (bar, field) 唯一。
+### `bar_tags`
+
+一根 bar 挂多个 tag。每条记录一个 tag。
 
 ```sql
-CREATE TABLE bar_labels (
+CREATE TABLE bar_tags (
   id          INTEGER PRIMARY KEY,
   bar_id      INTEGER NOT NULL REFERENCES bars(id) ON DELETE CASCADE,
-  field       TEXT NOT NULL,               -- 'bar_quality' 等
-  value       TEXT NOT NULL,               -- 字典里的 key
-  note        TEXT,                        -- 自由文本备注
+  tag_key     TEXT NOT NULL,               -- 字典里的 key，例 'strong_bull_bar', 'inside_bar'
+  note        TEXT,                        -- 这一条 tag 的可选备注
   created_at  INTEGER NOT NULL,
   updated_at  INTEGER NOT NULL,
-  UNIQUE (bar_id, field)
+  UNIQUE (bar_id, tag_key)                 -- 同 bar 不重复打同一个 tag
 );
-CREATE INDEX idx_bar_labels_bar ON bar_labels(bar_id);
-CREATE INDEX idx_bar_labels_value ON bar_labels(field, value);   -- 反向查"所有 strong_bull_bar"
+CREATE INDEX idx_bar_tags_bar ON bar_tags(bar_id);
+CREATE INDEX idx_bar_tags_key ON bar_tags(tag_key);   -- 反向查"所有打了 strong_bull_bar 的 bar"
 ```
 
-### `segment_labels`
+### `segment_tags`
 
-一段 K 线的结构标签。一个 segment 跨越 `start_bar_id..end_bar_id`（含两端），必须同属一个 session。
+一段 K 线挂多个 tag。范围 [start_bar_id..end_bar_id]，含两端，必须同 session。
 
 ```sql
-CREATE TABLE segment_labels (
+CREATE TABLE segment_tags (
   id              INTEGER PRIMARY KEY,
   session_id      INTEGER NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
   start_bar_id    INTEGER NOT NULL REFERENCES bars(id),
   end_bar_id      INTEGER NOT NULL REFERENCES bars(id),
-  field           TEXT NOT NULL,           -- 'segment_kind'（pullback/leg/breakout_attempt...）
-  value           TEXT NOT NULL,
-  direction       TEXT,                    -- 'bull' | 'bear' | NULL
+  tag_key         TEXT NOT NULL,
   note            TEXT,
   created_at      INTEGER NOT NULL,
-  updated_at      INTEGER NOT NULL
+  updated_at      INTEGER NOT NULL,
+  UNIQUE (start_bar_id, end_bar_id, tag_key)
 );
-CREATE INDEX idx_seg_session ON segment_labels(session_id);
-CREATE INDEX idx_seg_range ON segment_labels(start_bar_id, end_bar_id);
-CREATE INDEX idx_seg_value ON segment_labels(field, value);
+CREATE INDEX idx_seg_tags_session ON segment_tags(session_id);
+CREATE INDEX idx_seg_tags_range ON segment_tags(start_bar_id, end_bar_id);
+CREATE INDEX idx_seg_tags_key ON segment_tags(tag_key);
 ```
 
-**注意：** 同一段范围允许打多个 segment_label（例：既是 `leg`，又被解释为 `breakout_attempt`），所以不设组合唯一约束。
+> **没有独立 `direction` 列**：方向已编码在 visible tag 里（`bull_leg` / `bear_channel`）。Tag→Field 映射表负责 derive direction 给训练数据。
 
-### `context_labels`
+### `context_tags`
 
-某根 bar **收盘时**的市场语境快照。多 field、同 (bar, field) 唯一。
+某根 bar **收盘时**的市场语境快照，挂多 tag。
 
 ```sql
-CREATE TABLE context_labels (
+CREATE TABLE context_tags (
   id          INTEGER PRIMARY KEY,
   bar_id      INTEGER NOT NULL REFERENCES bars(id) ON DELETE CASCADE,
-  field       TEXT NOT NULL,               -- 'market_context' | 'trend_direction' | 'current_location' | ...
-  value       TEXT NOT NULL,
+  tag_key     TEXT NOT NULL,
   note        TEXT,
   created_at  INTEGER NOT NULL,
   updated_at  INTEGER NOT NULL,
-  UNIQUE (bar_id, field)
+  UNIQUE (bar_id, tag_key)
 );
-CREATE INDEX idx_ctx_bar ON context_labels(bar_id);
-CREATE INDEX idx_ctx_value ON context_labels(field, value);
+CREATE INDEX idx_ctx_tags_bar ON context_tags(bar_id);
+CREATE INDEX idx_ctx_tags_key ON context_tags(tag_key);
 ```
 
 ### `schema_migrations`
@@ -172,46 +174,48 @@ CREATE TABLE schema_migrations (
 
 ---
 
-## 索引和查询模式
-
-当前 schema 已经为 Bar / Segment / Context 三类标签留好表。实现节奏：
-
-- M2 只写 `bar_labels`
-- M3 完善标签字典和导出数据格式设计
-- M4 写 `segment_labels` / `context_labels`
-
-V1 主要的查询：
+## 查询模式
 
 | 查询 | 走的索引 |
 |---|---|
 | 列出最近 N 个 session | `idx_sessions_date` |
 | 加载一个 session 的所有 bar | `idx_bars_session` |
-| 加载一个 session 的所有 label | `idx_bar_labels_bar` + `idx_seg_session` + `idx_ctx_bar` |
-| 反向搜 "所有 strong_bull_bar" | `idx_bar_labels_value` |
-
-V2+ 反向检索（"按标签找历史 case"）依赖 `idx_*_value`，已经留好。
+| 加载一个 session 的所有 bar tags | `idx_bar_tags_bar`（JOIN bars on session_id） |
+| 加载一个 session 的所有 segment tags | `idx_seg_tags_session` |
+| 加载一个 session 的所有 context tags | `idx_ctx_tags_bar`（JOIN bars） |
+| 反向查"所有打了 strong_bull_bar 的 bar" | `idx_bar_tags_key` |
+| 字典按 group 列出 | `idx_dict_cat_group` |
 
 ---
 
-## 字典演化策略
+## Note 归属
 
-标签**会**改名、增减。M2 暂时不做字典管理 UI；M3 先把标签体系设计定稿，之后如果需要管理 UI 再做。预期流程：
+每条 tag 行可以**单独**带一个 note，不强制。设计上：
 
-1. **加新条目**：直接 INSERT，`is_active = 1`。立即可用。
-2. **重命名 key**：UI 上"重命名"动作 → 一个事务里：
-   - `UPDATE label_dictionary SET key = ? WHERE id = ?`
-   - `UPDATE bar_labels SET value = ? WHERE field = ? AND value = ?`
-   - 同样更新 `segment_labels`、`context_labels`
-3. **停用**：`is_active = 0`，**保留**历史引用。UI 在选择框里隐藏，但在已有标注里显示并标灰，允许"清除"或"迁移到新 key"。
-4. **删除**：不允许硬删除。只能停用。
+- **field 级 / tag 级 note**：直接写在 `bar_tags.note` / `segment_tags.note` / `context_tags.note`，描述对**这一条 tag** 的补充
+- **bar 级整体 note**：V1 不单独建表；如果想"对这根 bar 整体说点什么"，写在任一一条 tag 的 note 里即可
+- **session 级 note** 等设计需要时再加
 
-**为什么不用 dictionary_id 外键？** 把 `value` 存字符串而不是 id，导出 JSONL 时不用 join 字典就能产生人类可读的训练数据。代价是重命名要级联更新——单用户、量不大，可接受。
+V1 标注 UI 在 panel 底部显示一个聚合 note 视图（多 tag 的 note 拼起来），暂不区分谁的 note；M5 可以细化。
+
+---
+
+## 字典演化
+
+参见 [`LABEL_DICTIONARY.md`](./LABEL_DICTIONARY.md) 的"字典演化（V1→V4）"。schema 角度：
+
+1. **加新条目**：INSERT，`is_active = 1`，立即可用
+2. **重命名 key**：事务内 `UPDATE label_dictionary SET key = ?` + 同步 `UPDATE bar_tags / segment_tags / context_tags SET tag_key = ?`
+3. **停用**：`is_active = 0`，保留历史引用
+4. **删除**：不允许硬删除
+
+**为什么 tag_key 存字符串不存 dictionary_id？** 导出训练数据时不用 join 就有人类可读的 key。代价是重命名要级联更新，单用户量不大可接受。
 
 ---
 
 ## 迁移
 
-文件：`lib/db/migrations/001_init.sql`、`002_xxx.sql`...
+文件：`lib/db/migrations/001_init.sql`、`002_*.sql`...
 
 启动时 `lib/db/migrate.ts`：
 
@@ -228,7 +232,24 @@ for (const file of sortedMigrationFiles) {
 }
 ```
 
-**回滚**：V1 不写 down migrations。备份 = 拷 `data/barwise.db`。
+### 计划：M3 → M4 之间的破坏性迁移 `002_tag_model.sql`
+
+旧 schema（`bar_labels` / `segment_labels` / `context_labels`，带 `UNIQUE(bar_id, field)`、`field` 列含义为 `bar_quality`/`bar_role`/`market_context`/...）**和新 tag 模型不兼容**。M2 期间打的标注是测试数据，可以一次性丢弃。
+
+`002_tag_model.sql` 步骤：
+
+1. `DROP TABLE bar_labels;`
+2. `DROP TABLE segment_labels;`
+3. `DROP TABLE context_labels;`
+4. `DELETE FROM label_dictionary;`（旧字段定义全部清空）
+5. `DROP INDEX` 任何旧 schema 的 idx_*
+6. `ALTER TABLE label_dictionary` 把 `field` 列改名 `group_name`（SQLite 3.25+ 支持 rename column；如果版本不支持就走"create new + copy + drop"）
+7. `CREATE TABLE bar_tags / segment_tags / context_tags`（如上）
+8. 重新 seed 新 dictionary（从 `LABEL_DICTIONARY.md`）
+
+**M4 实现前必须先跑完 002**，否则 schema 不匹配。
+
+**回滚：** 不写 down migration。备份就是 `cp data/barwise.db data/barwise.db.bak`。
 
 ---
 
@@ -237,8 +258,8 @@ for (const file of sortedMigrationFiles) {
 `lib/db/client.ts` 启动时：
 
 ```ts
-db.pragma('journal_mode = WAL')      // 并发读 / 单写
-db.pragma('synchronous = NORMAL')    // WAL 下安全且快
-db.pragma('foreign_keys = ON')       // SQLite 默认关，必须显式开
+db.pragma('journal_mode = WAL')
+db.pragma('synchronous = NORMAL')
+db.pragma('foreign_keys = ON')
 db.pragma('busy_timeout = 5000')
 ```

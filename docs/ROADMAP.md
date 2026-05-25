@@ -1,6 +1,6 @@
 # Roadmap
 
-目标先做一个自己每天能用的标注工具：打开本地 ES 5m 数据，只看 RTH，每天一张图，先能给单根 K 线打标签；之后再完善标签体系、多 K/context 标注，以及图上的标注显示。
+目标先做一个自己每天能用的标注工具：打开本地 ES 5m 数据，只看 RTH，每天一张图，先能给单根 K 线打标签；之后再完善标签体系（Bar / Segment / Context 三类，Outcome 推迟到未来）、多 K/context 标注，以及图上的标注显示。
 
 不追求产品化，不做上传向导，不做多用户，不做复杂管理后台。
 
@@ -79,31 +79,45 @@
 
 ---
 
-## M3 — Label Design
+## M3 — Label Design（已完成）
 
-**目标：** 根据 `LABEL_DICTIONARY.md` 简洁但明确地定稿 Bar / Segment / Context 三类标签的字段、UI 分组、note 归属、颜色规则和数据格式，为 M4/M5 开发做准备。
+**目标：** 根据 `LABEL_DICTIONARY.md` 定稿三类标签（Bar / Segment / Context）的 tag、底层 field 映射、note 归属、数据存储方式，为 M4 开发做准备。Outcome（第 4 类）推迟到未来。
 
-### 设计内容
-- [ ] Bar：确认 `bar_quality` / `bar_role` 的显示分组、顺序、颜色
-- [ ] Segment：确认 `segment_kind`、`direction`、note 的 UI 和数据含义
-- [ ] Context：确认 `market_context`、`trend_direction`、`current_location`、`current_event`、`trade_quality`、interpretation note 的 UI 和数据含义
-- [ ] 明确每个 field 是单选、note，还是独立自由文本
-- [ ] 明确 note 归属：field 级 note、bar 级 note、segment note、context interpretation
-- [ ] 明确 M5 显示规则：bar dot / badge、segment band / line、context marker / summary
-- [ ] 检查当前 SQLite schema 是否够用，不够再写 migration
-- [ ] 更新 `LABEL_DICTIONARY.md`、`DATA_MODEL.md`、`UI_DESIGN.md`
+### 已完成
+- [x] 三层数据结构定稿：**Tag（V1 唯一存储）→ Field（由映射表派生）→ Note（自由文本）**
+- [x] V1→V4 演化路径：V1 自由 tag、V2 taxonomy、V3 升级为 field、V4 NLP/ML
+- [x] 人工标注 4 种入口动作：点单根 / 框选 / 事件结束 / 当天结束
+- [x] Bar 拆 **Bar Shape**（direction/body/close/tail）+ **Bar Pattern**（role/relation）两组，inside/outside 归入 Bar Pattern
+- [x] Segment 底层：structure + direction（pullback / breakout_attempt / reversal_attempt 移出 Segment，归 Bar Pattern / Context.event）
+- [x] Context 简化到三维：market / event / location（删 bias、删 trade_quality、删 Market Logic 整组）
+- [x] **全部多选**：Bar Shape / Bar Pattern / Segment / Context 各组都允许同一标注实体下多 tag
+- [x] **Tag→Field 映射表**：写入 `LABEL_DICTIONARY.md`，每个 visible tag 标出对应底层 field 的什么值
+- [x] schema 改造方案：`bar_labels` / `segment_labels` / `context_labels` → `bar_tags` / `segment_tags` / `context_tags`（一行一 tag，去 UNIQUE(bar_id, field)），见 `DATA_MODEL.md`
+- [x] `label_dictionary` schema 调整：`field` 列改名 `group_name`（含义改为 UI 分组）
+- [x] note 归属：每条 tag 一个可选 note，V1 不区分 bar 级 / field 级
+- [x] Outcome 类标签**V1 不实现**，挪到"未来（先不做）"
+
+### 收尾任务（M4 启动前要完成）
+- [ ] 写 migration `002_tag_model.sql`：DROP 旧三表 + label_dictionary 清空 + CREATE 新三表 + ALTER `label_dictionary` 列名
+- [ ] 写新 dictionary seed：根据 `LABEL_DICTIONARY.md` 把所有 visible tag 灌入 `label_dictionary`
+- [ ] 删除/重写 `lib/repo/labels.ts`、`lib/actions/label.ts` 中针对旧 schema 的代码（M2 写的 bar_labels CRUD 需要适配 bar_tags + 多选语义）
+- [ ] 适配 `components/label-panel/BarSelectionPanel.tsx`：从"每 field 单选 radio"改为"每 group 多 tag checkbox"
+- [ ] 更新 `UI_DESIGN.md`：UI 分组（Bar Shape / Bar Pattern / Segment / Context）、tag 多选交互、M5 显示规则草稿
+- [ ] 标注 SOP：在 `LABEL_DICTIONARY.md` 已加"标注 SOP"小节，跑一段时间后视情况补充
 
 ### 不做
-- 复杂字典管理页面
+
+- 字典管理 UI（停用 / 重命名 key）
 - JSON/JSONL 导出
 - NLP / 自动标注
 - 多用户数据权限
+- Outcome 类标签
 
 ### 验收
-- 标签字段、key、label、说明统一
-- UI 如何显示每类标签说清楚
-- note 归属和数据写入位置说清楚
-- M4/M5 可以按文档直接开发，不再临时想字段和显示规则
+
+- `LABEL_DICTIONARY.md` 包含所有四类（注：Outcome 仅占位说明 V1 不做）的 visible tag 完整列表 + Tag→Field 映射 ✅
+- `DATA_MODEL.md` 包含新 tag 模型 schema、M3→M4 迁移方案 ✅
+- 收尾任务完成后，M4 可以直接动 UI / repo / action，不再回头改 schema
 
 ---
 
@@ -113,10 +127,10 @@
 
 ### 任务
 - [ ] 图表支持拖动选择 bar range
-- [ ] 单根 bar 支持 Bar / Context 两类表单
-- [ ] 多根 range 支持 Segment 表单
-- [ ] `lib/repo/labels.ts` 增加 segment/context CRUD
-- [ ] `lib/actions/label.ts` 增加 segment/context actions
+- [ ] 单根 bar 支持 Bar / Context 两组多 tag 表单
+- [ ] 多根 range 支持 Segment 多 tag 表单
+- [ ] `lib/repo/labels.ts` 增加 segment_tags / context_tags CRUD
+- [ ] `lib/actions/label.ts` 增加 segment / context actions
 - [ ] 右侧 panel 根据选择类型切换：
   - 单 bar：Bar / Context
   - range：Segment
@@ -129,7 +143,7 @@
 ### 验收
 - 拖动选择多根 K 线后能保存 segment label
 - 单根 bar 能同时保存 bar labels 和 context labels
-- 已有 segment/context 能回填、修改、删除
+- 已有 segment / context / outcome 能回填、修改、删除
 - 切换 bar 或 range 不丢已保存数据
 
 ---
@@ -170,6 +184,7 @@ M1–M5 完成后就是 V1：
 
 ## 未来（先不做）
 
+- **Outcome Labels**：第 4 类标签，事后回看打的结果（failed_breakout / continued / reversed 等）。需要设计 outcome ↔ segment/context 的锚定关系。先用 segment note 兜底。
 - ETH / DAY / RTH 视图切换
 - 上传任意 CSV
 - 字典编辑 UI
