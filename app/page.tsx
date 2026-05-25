@@ -17,10 +17,10 @@ export default function Home() {
             Sessions
           </Link>
           <Link
-            href="/demo"
+            href="/tags"
             className="rounded border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100"
           >
-            View demo
+            Tags
           </Link>
         </div>
       </div>

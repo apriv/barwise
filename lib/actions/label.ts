@@ -194,3 +194,64 @@ export async function deleteOutcomeTag(formData: FormData) {
   deleteOutcomeTagRecord(input.startBarId, input.endBarId, input.tagKey);
   revalidatePath(`/sessions/${input.sessionId}`);
 }
+
+const clearAllTagsSchema = z.object({
+  sessionId: z.coerce.number().int().positive(),
+});
+
+export async function clearAllSessionTags(formData: FormData) {
+  ensureDatabase();
+
+  const input = clearAllTagsSchema.parse({
+    sessionId: formData.get("sessionId"),
+  });
+
+  const db = getDb();
+
+  db.transaction(() => {
+    // Clear bar tags
+    db.prepare(
+      `
+      DELETE FROM bar_tags
+      WHERE bar_id IN (
+        SELECT id FROM bars WHERE session_id = ?
+      )
+    `,
+    ).run(input.sessionId);
+
+    // Clear context tags
+    db.prepare(
+      `
+      DELETE FROM context_tags
+      WHERE bar_id IN (
+        SELECT id FROM bars WHERE session_id = ?
+      )
+    `,
+    ).run(input.sessionId);
+
+    // Clear segment tags
+    db.prepare(
+      `
+      DELETE FROM segment_tags
+      WHERE session_id = ?
+    `,
+    ).run(input.sessionId);
+
+    // Clear outcome tags
+    const outcomeTableExists = db
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'outcome_tags'",
+      )
+      .get();
+    if (outcomeTableExists) {
+      db.prepare(
+        `
+        DELETE FROM outcome_tags
+        WHERE session_id = ?
+      `,
+      ).run(input.sessionId);
+    }
+  })();
+
+  revalidatePath(`/sessions/${input.sessionId}`);
+}

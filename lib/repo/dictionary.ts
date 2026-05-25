@@ -605,18 +605,102 @@ export function renameDictionaryKey(
     })();
 }
 
+export function countTagUsage(
+  category: LabelCategory,
+  key: string,
+  db?: Database,
+): number {
+  const targetDb = database(db);
+  let count = 0;
+
+  if (category === "bar") {
+    const result = targetDb
+      .prepare("SELECT COUNT(*) as count FROM bar_tags WHERE tag_key = ?")
+      .get(key) as { count: number };
+    count += result.count;
+  }
+
+  if (category === "segment") {
+    const result = targetDb
+      .prepare("SELECT COUNT(*) as count FROM segment_tags WHERE tag_key = ?")
+      .get(key) as { count: number };
+    count += result.count;
+  }
+
+  if (category === "context") {
+    const result = targetDb
+      .prepare("SELECT COUNT(*) as count FROM context_tags WHERE tag_key = ?")
+      .get(key) as { count: number };
+    count += result.count;
+  }
+
+  if (category === "outcome") {
+    const table = targetDb
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'outcome_tags'",
+      )
+      .get();
+    if (table) {
+      const result = targetDb
+        .prepare("SELECT COUNT(*) as count FROM outcome_tags WHERE tag_key = ?")
+        .get(key) as { count: number };
+      count += result.count;
+    }
+  }
+
+  return count;
+}
+
 export function deleteDictionaryItem(
   category: LabelCategory,
   key: string,
   db?: Database,
 ) {
-  database(db)
-    .prepare(
-      `
-      DELETE FROM label_dictionary
-      WHERE category = ?
-        AND key = ?
-    `,
-    )
-    .run(category, key);
+  const targetDb = database(db);
+
+  targetDb
+    .transaction(() => {
+      // Delete from all tag tables
+      if (category === "bar") {
+        targetDb
+          .prepare("DELETE FROM bar_tags WHERE tag_key = ?")
+          .run(key);
+      }
+
+      if (category === "segment") {
+        targetDb
+          .prepare("DELETE FROM segment_tags WHERE tag_key = ?")
+          .run(key);
+      }
+
+      if (category === "context") {
+        targetDb
+          .prepare("DELETE FROM context_tags WHERE tag_key = ?")
+          .run(key);
+      }
+
+      if (category === "outcome") {
+        const table = targetDb
+          .prepare(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'outcome_tags'",
+          )
+          .get();
+        if (table) {
+          targetDb
+            .prepare("DELETE FROM outcome_tags WHERE tag_key = ?")
+            .run(key);
+        }
+      }
+
+      // Delete from dictionary
+      targetDb
+        .prepare(
+          `
+          DELETE FROM label_dictionary
+          WHERE category = ?
+            AND key = ?
+        `,
+        )
+        .run(category, key);
+    })();
 }

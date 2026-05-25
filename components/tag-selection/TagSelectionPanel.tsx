@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState, useTransition } from "react";
-import { batchDictionaryOperation } from "@/lib/actions/dictionary";
+import { batchDictionaryOperation, getTagsUsageForBatchDelete } from "@/lib/actions/dictionary";
 import type { LabelDictionaryItemWithUsage } from "@/lib/repo/dictionary";
 import type { LabelCategory } from "@/lib/repo/dictionary";
 
@@ -39,26 +39,37 @@ export function TagSelectionPanel({ items }: TagSelectionPanelProps) {
     (action: "enable" | "disable" | "delete") => {
       if (selected.size === 0) return;
 
-      if (
-        action === "delete" &&
-        !confirm(
-          `Are you sure you want to delete ${selected.size} tag(s)? This action cannot be undone.`,
-        )
-      ) {
-        return;
-      }
-
       const itemsToProcess = Array.from(selected).map((id) => {
         const [category, key] = id.split(":");
         return { category: category as LabelCategory, key };
       });
 
-      startTransition(() => {
-        const formData = new FormData();
-        formData.set("action", action);
-        formData.set("items", JSON.stringify(itemsToProcess));
-        batchDictionaryOperation(formData);
-      });
+      if (action === "delete") {
+        startTransition(async () => {
+          const usage = await getTagsUsageForBatchDelete(itemsToProcess);
+          const totalUsage = Object.values(usage).reduce((a, b) => a + b, 0);
+
+          const confirmMsg =
+            totalUsage === 0
+              ? `Are you sure you want to delete ${selected.size} tag(s)? This action cannot be undone.`
+              : `Are you sure you want to delete ${selected.size} tag(s) along with ${totalUsage} marked annotation(s)? This action cannot be undone.`;
+
+          if (confirm(confirmMsg)) {
+            const formData = new FormData();
+            formData.set("action", action);
+            formData.set("items", JSON.stringify(itemsToProcess));
+            await batchDictionaryOperation(formData);
+            setSelected(new Set());
+          }
+        });
+      } else {
+        startTransition(() => {
+          const formData = new FormData();
+          formData.set("action", action);
+          formData.set("items", JSON.stringify(itemsToProcess));
+          batchDictionaryOperation(formData);
+        });
+      }
     },
     [selected],
   );

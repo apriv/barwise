@@ -11,6 +11,7 @@ import {
   setDictionaryItemActive,
   upsertDictionaryItem,
   deleteDictionaryItem,
+  countTagUsage,
 } from "@/lib/repo/dictionary";
 
 const categorySchema = z.enum(["bar", "segment", "context", "outcome"]);
@@ -165,4 +166,21 @@ export async function batchDictionaryOperation(formData: FormData) {
 
   revalidatePath("/tags");
   revalidatePath("/tags/dashboard");
+}
+
+export async function getTagsUsageForBatchDelete(
+  items: Array<{ category: string; key: string }>,
+): Promise<{ [key: string]: number }> {
+  ensureDatabase();
+
+  const usage: { [key: string]: number } = {};
+  for (const item of items) {
+    const count = countTagUsage(
+      item.category as any,
+      item.key,
+    );
+    usage[`${item.category}:${item.key}`] = count;
+  }
+
+  return usage;
 }

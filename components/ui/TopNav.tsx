@@ -8,7 +8,6 @@ import { ThemeToggle } from "@/components/ui/ThemeToggle";
 const ITEMS = [
   { href: "/sessions", label: "Sessions" },
   { href: "/tags", label: "Tags" },
-  { href: "/demo", label: "Demo" },
 ];
 
 export function TopNav() {

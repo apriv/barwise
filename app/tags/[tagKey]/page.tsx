@@ -151,6 +151,9 @@ export default async function TagDetailPage({
         </section>
 
         <form action={saveDictionaryItem} className="grid gap-4 rounded border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950/60 md:grid-cols-2">
+          <input type="hidden" name="originalCategory" value={item.category} />
+          <input type="hidden" name="originalKey" value={item.key} />
+          <input type="hidden" name="category" value={item.category} />
           <input type="hidden" name="key" value={item.key} />
           <label className="space-y-1 text-sm">
             <span className="text-xs font-medium uppercase text-zinc-500">Display name</span>
@@ -161,20 +164,12 @@ export default async function TagDetailPage({
               className="w-full rounded border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950"
             />
           </label>
-          <label className="space-y-1 text-sm">
+          <div className="space-y-1 text-sm">
             <span className="text-xs font-medium uppercase text-zinc-500">Category</span>
-            <select
-              name="category"
-              defaultValue={item.category}
-              className="w-full rounded border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950"
-            >
-              {categories.map((entry) => (
-                <option key={entry} value={entry}>
-                  {categoryLabel(entry)}
-                </option>
-              ))}
-            </select>
-          </label>
+            <div className="w-full rounded border border-zinc-200 bg-zinc-100 px-3 py-2 text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
+              {categoryLabel(item.category)}
+            </div>
+          </div>
           <label className="space-y-1 text-sm">
             <span className="text-xs font-medium uppercase text-zinc-500">Group</span>
             <input
