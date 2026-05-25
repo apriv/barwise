@@ -29,9 +29,16 @@ export type BarTagMarker = {
   count: number;
 };
 
+export type SegmentTagMarker = {
+  startBarNumber: number;
+  endBarNumber: number;
+  count: number;
+};
+
 type ChartProps = {
   bars: ChartBar[];
   barTagMarkers?: BarTagMarker[];
+  segmentTagMarkers?: SegmentTagMarker[];
   selectedBarNumber?: number | null;
   selectedRange?: { start: number; end: number } | null;
   onSelectBar?: (bar: ChartBar, meta: { rangeMode: boolean }) => void;
@@ -44,6 +51,7 @@ function formatPrice(value: number) {
 export function Chart({
   bars,
   barTagMarkers = [],
+  segmentTagMarkers = [],
   selectedBarNumber,
   selectedRange,
   onSelectBar,
@@ -87,6 +95,27 @@ export function Chart({
       }))
       .filter((marker) => marker.count > 0);
   }, [bars, barTagMarkers]);
+
+  const savedSegmentBars = useMemo(() => {
+    return segmentTagMarkers.flatMap((segment, segmentIndex) => {
+      const start = Math.min(segment.startBarNumber, segment.endBarNumber);
+      const end = Math.max(segment.startBarNumber, segment.endBarNumber);
+      const segmentBars = bars.filter(
+        (bar) => bar.barNumber >= start && bar.barNumber <= end,
+      );
+
+      return segmentBars.map((bar, barIndex) => {
+        const isEdge = barIndex === 0 || barIndex === segmentBars.length - 1;
+
+        return {
+          bar,
+          segmentIndex,
+          isEdge,
+          count: segment.count,
+        };
+      });
+    });
+  }, [bars, segmentTagMarkers]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -183,6 +212,20 @@ export function Chart({
       size: 0.55,
     }));
 
+    const savedSegmentMarkers: SeriesMarker<Time>[] = savedSegmentBars.map(
+      ({ bar, segmentIndex, isEdge, count }) => ({
+        id: `segment-tags-${segmentIndex}-${bar.id}`,
+        time: bar.time as UTCTimestamp,
+        position: "belowBar",
+        shape: "square",
+        color: "#a78bfa",
+        text: isEdge && count > 1 ? String(count) : undefined,
+        size: isEdge ? 0.62 : 0.32,
+      }),
+    );
+
+    markers.push(...savedSegmentMarkers);
+
     const rangeMarkers: SeriesMarker<Time>[] = selectedRangeBars.map((bar, index) => {
       const isEdge =
         index === 0 || index === selectedRangeBars.length - 1;
@@ -218,7 +261,7 @@ export function Chart({
     }
 
     markerApi.setMarkers(markers);
-  }, [labeledBars, selectedBar, selectedRangeBars]);
+  }, [labeledBars, savedSegmentBars, selectedBar, selectedRangeBars]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">

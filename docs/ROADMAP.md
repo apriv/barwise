@@ -159,18 +159,18 @@
 ### 任务
 - [x] 选中 bar 时高亮对应标注
 - [x] 选中 range 时高亮对应标注
-- [ ] 图表上下文：每个 RTH session 额外显示前一天 RTH 最后一根、后一天 RTH 第一根（待定）
 - [ ] bar 编号提示：每 2–3 根 K 线在下方显示低调小号 bar_number
-- [ ] hover 标注时显示 label summary
 - 整体UI
   - 允许深色/浅色模式切换 
   - 下拉时保持k线图不变，只滚动bar tags选择。
   - 允许每组bar tag收起
+  - 右侧默认收起OHLC, 有个按钮可以展开。这个看得比较少 
 - tag的UI显示 
   - [x] bar label：bar 上方 dot / badge
-  - [ ] segment label：横向 band / line
+  - [x] segment label：横向 band / line
   - [ ] context label：bar 下方 marker 或侧栏摘要
   - segment 的回填现在只有完全对应的 segment 会显示；后续需要显示/提示相交 segment
+- [ ] 图表上下文：每个 RTH session 额外显示前一天 RTH 最后一根、后一天 RTH 第一根（待定 先不做）
 
 ### 不做
 - 新增标注数据类型

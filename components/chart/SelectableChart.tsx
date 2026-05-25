@@ -7,14 +7,17 @@ import {
   Chart,
   type BarTagMarker,
   type ChartBar,
+  type SegmentTagMarker,
 } from "@/components/chart/Chart";
 
 export function SelectableChart({
   bars,
   barTagMarkers,
+  segmentTagMarkers,
 }: {
   bars: ChartBar[];
   barTagMarkers: BarTagMarker[];
+  segmentTagMarkers: SegmentTagMarker[];
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -75,6 +78,7 @@ export function SelectableChart({
     <Chart
       bars={bars}
       barTagMarkers={barTagMarkers}
+      segmentTagMarkers={segmentTagMarkers}
       selectedBarNumber={selectedBarNumber}
       selectedRange={selectedRange}
       onSelectBar={selectBar}

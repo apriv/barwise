@@ -2,7 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 
-import type { BarTagMarker, ChartBar } from "@/components/chart/Chart";
+import type {
+  BarTagMarker,
+  ChartBar,
+  SegmentTagMarker,
+} from "@/components/chart/Chart";
 import { BarKeyboardNav } from "@/components/chart/BarKeyboardNav";
 import { SelectableChart } from "@/components/chart/SelectableChart";
 import { BarSelectionPanel } from "@/components/label-panel/BarSelectionPanel";
@@ -62,6 +66,29 @@ export default async function SessionPage({ params }: PageProps) {
     }, new Map()),
     ([barNumber, count]) => ({ barNumber, count }),
   );
+  const segmentTagMarkers: SegmentTagMarker[] = Array.from(
+    segmentTags.reduce<Map<string, SegmentTagMarker>>((markers, tag) => {
+      const startBarNumber = Math.min(
+        tag.start_bar_number,
+        tag.end_bar_number,
+      );
+      const endBarNumber = Math.max(
+        tag.start_bar_number,
+        tag.end_bar_number,
+      );
+      const key = `${startBarNumber}:${endBarNumber}`;
+      const existing = markers.get(key);
+
+      markers.set(key, {
+        startBarNumber,
+        endBarNumber,
+        count: (existing?.count ?? 0) + 1,
+      });
+
+      return markers;
+    }, new Map()),
+    ([, marker]) => marker,
+  );
 
   return (
     <main className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_360px]">
@@ -110,7 +137,11 @@ export default async function SessionPage({ params }: PageProps) {
           </div>
         </header>
         <div className="min-h-0 flex-1">
-          <SelectableChart bars={bars} barTagMarkers={barTagMarkers} />
+          <SelectableChart
+            bars={bars}
+            barTagMarkers={barTagMarkers}
+            segmentTagMarkers={segmentTagMarkers}
+          />
         </div>
       </section>
 
