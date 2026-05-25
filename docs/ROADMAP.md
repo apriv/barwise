@@ -170,7 +170,7 @@
   - [x] segment label：横向 band / line
   - [x] context label：bar 下方 marker 或侧栏摘要
   - segment 的回填现在只有完全对应的 segment 会显示；后续需要显示/提示相交 segment
-- 加一个按钮隐藏/显示已标记的记号，有点眼花。只保留当前选择的
+- [x] 加一个按钮隐藏/显示已标记的记号，有点眼花。只保留当前选择的
 - [ ] 图表上下文：每个 RTH session 额外显示前一天 RTH 最后一根、后一天 RTH 第一根（待定 先不做）
 
 ### 不做

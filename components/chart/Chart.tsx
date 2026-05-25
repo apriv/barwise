@@ -69,6 +69,7 @@ export function Chart({
     null,
   );
   const [hoveredBar, setHoveredBar] = useState<ChartBar | null>(bars[0] ?? null);
+  const [showSavedMarkers, setShowSavedMarkers] = useState(true);
 
   const barsByTime = useMemo(() => {
     return new Map(bars.map((bar) => [bar.time, bar]));
@@ -222,43 +223,45 @@ export function Chart({
     const markerApi = selectedMarkerRef.current;
     if (!markerApi) return;
 
-    const markers: SeriesMarker<Time>[] = labeledBars.map(({ bar, count }) => ({
-      id: `bar-tags-${bar.id}`,
-      time: bar.time as UTCTimestamp,
-      position: "aboveBar",
-      shape: "circle",
-      color: "#22c55e",
-      text: count > 1 ? String(count) : undefined,
-      size: 0.55,
-    }));
+    const markers: SeriesMarker<Time>[] = [];
 
-    const savedSegmentMarkers: SeriesMarker<Time>[] = savedSegmentBars.map(
-      ({ bar, segmentIndex, isEdge, count }) => ({
-        id: `segment-tags-${segmentIndex}-${bar.id}`,
+    if (showSavedMarkers) {
+      const barMarkers: SeriesMarker<Time>[] = labeledBars.map(({ bar, count }) => ({
+        id: `bar-tags-${bar.id}`,
         time: bar.time as UTCTimestamp,
-        position: "belowBar",
-        shape: "square",
-        color: "#a78bfa",
-        text: isEdge && count > 1 ? String(count) : undefined,
-        size: isEdge ? 0.62 : 0.32,
-      }),
-    );
-
-    markers.push(...savedSegmentMarkers);
-
-    const contextMarkers: SeriesMarker<Time>[] = contextBars.map(
-      ({ bar, count }) => ({
-        id: `context-tags-${bar.id}`,
-        time: bar.time as UTCTimestamp,
-        position: "belowBar",
-        shape: "arrowUp",
-        color: "#f59e0b",
+        position: "aboveBar",
+        shape: "circle",
+        color: "#22c55e",
         text: count > 1 ? String(count) : undefined,
-        size: 0.72,
-      }),
-    );
+        size: 0.55,
+      }));
 
-    markers.push(...contextMarkers);
+      const savedSegmentMarkers: SeriesMarker<Time>[] = savedSegmentBars.map(
+        ({ bar, segmentIndex, isEdge, count }) => ({
+          id: `segment-tags-${segmentIndex}-${bar.id}`,
+          time: bar.time as UTCTimestamp,
+          position: "belowBar",
+          shape: "square",
+          color: "#a78bfa",
+          text: isEdge && count > 1 ? String(count) : undefined,
+          size: isEdge ? 0.62 : 0.32,
+        }),
+      );
+
+      const contextMarkers: SeriesMarker<Time>[] = contextBars.map(
+        ({ bar, count }) => ({
+          id: `context-tags-${bar.id}`,
+          time: bar.time as UTCTimestamp,
+          position: "belowBar",
+          shape: "arrowUp",
+          color: "#f59e0b",
+          text: count > 1 ? String(count) : undefined,
+          size: 0.72,
+        }),
+      );
+
+      markers.push(...barMarkers, ...savedSegmentMarkers, ...contextMarkers);
+    }
 
     const rangeMarkers: SeriesMarker<Time>[] = selectedRangeBars.map((bar, index) => {
       const isEdge =
@@ -301,29 +304,47 @@ export function Chart({
     savedSegmentBars,
     selectedBar,
     selectedRangeBars,
+    showSavedMarkers,
   ]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex h-11 items-center gap-4 border-b border-zinc-800 px-4 font-mono text-xs text-zinc-400">
-        {selectedRange ? (
-          <span className="text-sky-300">
-            Range #{Math.min(selectedRange.start, selectedRange.end)}-
-            {Math.max(selectedRange.start, selectedRange.end)}
-          </span>
-        ) : null}
-        {hoveredBar ? (
-          <>
-            <span className="text-zinc-100">#{hoveredBar.barNumber}</span>
-            <span>O {formatPrice(hoveredBar.open)}</span>
-            <span>H {formatPrice(hoveredBar.high)}</span>
-            <span>L {formatPrice(hoveredBar.low)}</span>
-            <span>C {formatPrice(hoveredBar.close)}</span>
-            <span>V {hoveredBar.volume ?? "-"}</span>
-          </>
-        ) : (
-          <span>Hover a bar for OHLC</span>
-        )}
+      <div className="flex h-11 items-center justify-between gap-4 border-b border-zinc-800 px-4 font-mono text-xs text-zinc-400">
+        <div className="flex min-w-0 items-center gap-4 overflow-hidden">
+          {selectedRange ? (
+            <span className="shrink-0 text-sky-300">
+              Range #{Math.min(selectedRange.start, selectedRange.end)}-
+              {Math.max(selectedRange.start, selectedRange.end)}
+            </span>
+          ) : null}
+          {hoveredBar ? (
+            <>
+              <span className="shrink-0 text-zinc-100">
+                #{hoveredBar.barNumber}
+              </span>
+              <span className="shrink-0">O {formatPrice(hoveredBar.open)}</span>
+              <span className="shrink-0">H {formatPrice(hoveredBar.high)}</span>
+              <span className="shrink-0">L {formatPrice(hoveredBar.low)}</span>
+              <span className="shrink-0">C {formatPrice(hoveredBar.close)}</span>
+              <span className="shrink-0">V {hoveredBar.volume ?? "-"}</span>
+            </>
+          ) : (
+            <span>Hover a bar for OHLC</span>
+          )}
+        </div>
+        <button
+          type="button"
+          aria-pressed={showSavedMarkers}
+          onClick={() => setShowSavedMarkers((value) => !value)}
+          className={
+            "h-7 min-w-16 shrink-0 rounded border px-2.5 text-xs font-medium transition-colors " +
+            (showSavedMarkers
+              ? "border-zinc-600 bg-zinc-800 text-zinc-100"
+              : "border-zinc-800 bg-zinc-950 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300")
+          }
+        >
+          Marks
+        </button>
       </div>
       <div ref={containerRef} className="min-h-0 flex-1" />
     </div>
