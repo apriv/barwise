@@ -98,9 +98,9 @@ export function listSessionsWithStats(options?: {
         COUNT(DISTINCT labeled_bars.bar_id) AS labeled_bar_count
       FROM sessions
       LEFT JOIN (
-        SELECT bar_id FROM bar_labels
+        SELECT bar_id FROM bar_tags
         UNION
-        SELECT bar_id FROM context_labels
+        SELECT bar_id FROM context_tags
       ) AS labeled_bars
         ON labeled_bars.bar_id IN (
           SELECT id FROM bars WHERE bars.session_id = sessions.id

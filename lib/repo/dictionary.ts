@@ -7,7 +7,7 @@ export type LabelCategory = "bar" | "segment" | "context";
 export type LabelDictionaryItem = {
   id: number;
   category: LabelCategory;
-  field: string;
+  group_name: string;
   key: string;
   label: string;
   description: string | null;
@@ -28,7 +28,7 @@ export function listActiveDictionaryItems(
       SELECT
         id,
         category,
-        field,
+        group_name,
         key,
         label,
         description,
@@ -36,7 +36,7 @@ export function listActiveDictionaryItems(
       FROM label_dictionary
       WHERE category = ?
         AND is_active = 1
-      ORDER BY field ASC, sort_order ASC, label ASC
+      ORDER BY group_name ASC, sort_order ASC, label ASC
     `,
     )
     .all(category) as LabelDictionaryItem[];

@@ -2,6 +2,86 @@ import type { Database } from "better-sqlite3";
 
 import { getDb } from "@/lib/db/client";
 
+// M3 Tag Model - New types for bar_tags
+export type BarTagRecord = {
+  id: number;
+  bar_id: number;
+  bar_number: number;
+  tag_key: string;
+  tag_label: string;
+  note: string | null;
+  created_at: number;
+  updated_at: number;
+};
+
+export type UpsertBarTagInput = {
+  barId: number;
+  tagKey: string;
+  note?: string | null;
+};
+
+function database(db?: Database) {
+  return db ?? getDb();
+}
+
+function unixNow() {
+  return Math.floor(Date.now() / 1000);
+}
+
+// M3: Get all bar tags for a session, including tag labels from dictionary
+export function listBarTagsForSession(sessionId: number, db?: Database) {
+  return database(db)
+    .prepare(
+      `
+      SELECT
+        bar_tags.id,
+        bar_tags.bar_id,
+        bars.bar_number,
+        bar_tags.tag_key,
+        label_dictionary.label as tag_label,
+        bar_tags.note,
+        bar_tags.created_at,
+        bar_tags.updated_at
+      FROM bar_tags
+      INNER JOIN bars ON bars.id = bar_tags.bar_id
+      INNER JOIN label_dictionary ON label_dictionary.key = bar_tags.tag_key
+      WHERE bars.session_id = ?
+      ORDER BY bars.bar_number ASC, bar_tags.tag_key ASC
+    `,
+    )
+    .all(sessionId) as BarTagRecord[];
+}
+
+// M3: Upsert a bar tag
+export function upsertBarTag(input: UpsertBarTagInput, db?: Database) {
+  const now = unixNow();
+
+  database(db)
+    .prepare(
+      `
+      INSERT INTO bar_tags (
+        bar_id,
+        tag_key,
+        note,
+        created_at,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT (bar_id, tag_key) DO UPDATE SET
+        note = excluded.note,
+        updated_at = excluded.updated_at
+    `,
+    )
+    .run(input.barId, input.tagKey, input.note ?? null, now, now);
+}
+
+// M3: Delete a bar tag
+export function deleteBarTag(barId: number, tagKey: string, db?: Database) {
+  database(db)
+    .prepare("DELETE FROM bar_tags WHERE bar_id = ? AND tag_key = ?")
+    .run(barId, tagKey);
+}
+
+// Deprecated: Old bar_labels functions (kept for reference during M3 transition)
 export type BarLabelRecord = {
   id: number;
   bar_id: number;
@@ -19,60 +99,18 @@ export type UpsertBarLabelInput = {
   note?: string | null;
 };
 
-function database(db?: Database) {
-  return db ?? getDb();
-}
-
-function unixNow() {
-  return Math.floor(Date.now() / 1000);
-}
-
+// Deprecated: Use listBarTagsForSession instead
 export function listBarLabelsForSession(sessionId: number, db?: Database) {
-  return database(db)
-    .prepare(
-      `
-      SELECT
-        bar_labels.id,
-        bar_labels.bar_id,
-        bar_labels.field,
-        bar_labels.value,
-        bar_labels.note,
-        bar_labels.created_at,
-        bar_labels.updated_at
-      FROM bar_labels
-      INNER JOIN bars ON bars.id = bar_labels.bar_id
-      WHERE bars.session_id = ?
-      ORDER BY bars.bar_number ASC, bar_labels.field ASC
-    `,
-    )
-    .all(sessionId) as BarLabelRecord[];
+  // Return empty array since bar_labels table no longer exists
+  return [] as BarLabelRecord[];
 }
 
+// Deprecated: Use upsertBarTag instead
 export function upsertBarLabel(input: UpsertBarLabelInput, db?: Database) {
-  const now = unixNow();
-
-  database(db)
-    .prepare(
-      `
-      INSERT INTO bar_labels (
-        bar_id,
-        field,
-        value,
-        note,
-        created_at,
-        updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?)
-      ON CONFLICT (bar_id, field) DO UPDATE SET
-        value = excluded.value,
-        note = excluded.note,
-        updated_at = excluded.updated_at
-    `,
-    )
-    .run(input.barId, input.field, input.value, input.note ?? null, now, now);
+  // No-op, bar_labels table no longer exists
 }
 
+// Deprecated: Use deleteBarTag instead
 export function deleteBarLabel(barId: number, field: string, db?: Database) {
-  database(db)
-    .prepare("DELETE FROM bar_labels WHERE bar_id = ? AND field = ?")
-    .run(barId, field);
+  // No-op, bar_labels table no longer exists
 }

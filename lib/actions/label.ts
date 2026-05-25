@@ -6,75 +6,71 @@ import { z } from "zod";
 import { ensureDatabase } from "@/lib/db/ensure";
 import { getDb } from "@/lib/db/client";
 import {
-  deleteBarLabel as deleteBarLabelRecord,
-  upsertBarLabel as upsertBarLabelRecord,
+  deleteBarTag as deleteBarTagRecord,
+  upsertBarTag as upsertBarTagRecord,
 } from "@/lib/repo/labels";
 
-const barLabelActionSchema = z.object({
+// M3 Tag Model - New schemas for bar_tags
+const barTagActionSchema = z.object({
   sessionId: z.coerce.number().int().positive(),
   barId: z.coerce.number().int().positive(),
-  field: z.enum(["bar_quality", "bar_role"]),
-  value: z.string().min(1),
-  note: z.string().optional(),
+  tagKey: z.string().min(1),
 });
 
-const deleteBarLabelActionSchema = z.object({
+const deleteBarTagActionSchema = z.object({
   sessionId: z.coerce.number().int().positive(),
   barId: z.coerce.number().int().positive(),
-  field: z.enum(["bar_quality", "bar_role"]),
+  tagKey: z.string().min(1),
 });
 
-function assertDictionaryValue(field: string, value: string) {
+function assertValidBarTag(tagKey: string) {
   const row = getDb()
     .prepare(
       `
       SELECT 1
       FROM label_dictionary
       WHERE category = 'bar'
-        AND field = ?
         AND key = ?
         AND is_active = 1
     `,
     )
-    .get(field, value);
+    .get(tagKey);
 
   if (!row) {
-    throw new Error(`Invalid bar label value: ${field}=${value}`);
+    throw new Error(`Invalid bar tag: ${tagKey}`);
   }
 }
 
-export async function upsertBarLabel(formData: FormData) {
+// M3: Upsert a bar tag
+export async function upsertBarTag(formData: FormData) {
   ensureDatabase();
 
-  const input = barLabelActionSchema.parse({
+  const input = barTagActionSchema.parse({
     sessionId: formData.get("sessionId"),
     barId: formData.get("barId"),
-    field: formData.get("field"),
-    value: formData.get("value"),
-    note: formData.get("note") ?? undefined,
+    tagKey: formData.get("tagKey"),
   });
 
-  assertDictionaryValue(input.field, input.value);
+  assertValidBarTag(input.tagKey);
 
-  upsertBarLabelRecord({
+  upsertBarTagRecord({
     barId: input.barId,
-    field: input.field,
-    value: input.value,
-    note: input.note?.trim() || null,
+    tagKey: input.tagKey,
   });
 
   revalidatePath(`/sessions/${input.sessionId}`);
 }
 
-export async function deleteBarLabel(formData: FormData) {
+// M3: Delete a bar tag
+export async function deleteBarTag(formData: FormData) {
   ensureDatabase();
 
-  const input = deleteBarLabelActionSchema.parse({
+  const input = deleteBarTagActionSchema.parse({
     sessionId: formData.get("sessionId"),
     barId: formData.get("barId"),
-    field: formData.get("field"),
+    tagKey: formData.get("tagKey"),
   });
 
-  deleteBarLabelRecord(input.barId, input.field);
+  deleteBarTagRecord(input.barId, input.tagKey);
   revalidatePath(`/sessions/${input.sessionId}`);
 }

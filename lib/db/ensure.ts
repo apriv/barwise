@@ -1,5 +1,5 @@
 import { migrate } from "@/lib/db/migrate";
-import { seedDictionary } from "@/lib/db/seed-dictionary";
+import seedDictionary from "@/lib/db/seed-dictionary-v2";
 
 let didEnsure = false;
 
