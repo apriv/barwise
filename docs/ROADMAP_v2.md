@@ -253,33 +253,33 @@ source
 **目标：** 让标签体系可以被复盘和修剪：哪些太泛、哪些太少、哪些重复、哪些分组过大。
 
 ### 数据查询
-- [ ] 统计每个 tag 的总使用次数
-- [ ] 按 category / group 统计使用次数
-- [ ] 按最近 N 个 session 统计使用趋势
-- [ ] 统计 inactive tag 的历史引用
-- [ ] 统计可能重复的 tag：
+- [x] 统计每个 tag 的总使用次数
+- [x] 按 category / group 统计使用次数
+- [x] 按最近 N 个 session 统计使用趋势
+- [x] 统计 inactive tag 的历史引用
+- [x] 统计可能重复的 tag：
   - [ ] display name 相近
-  - [ ] field mapping 相同
+  - [x] field mapping 相同
   - [ ] 同组下 key 相似
-- [ ] 统计过大的 group：
-  - [ ] tag 数过多
+- [x] 统计过大的 group：
+  - [x] tag 数过多
   - [ ] 使用集中在少数 tag
-- [ ] 统计几乎不用的 tag
+- [x] 统计几乎不用的 tag
 
 ### UI
-- [ ] `/tags` 增加 stats view
-- [ ] Tag 详情页显示 usage trend
-- [ ] 分组页显示“建议整理”列表：
-  - [ ] too common
-  - [ ] rarely used
-  - [ ] duplicate mapping
-  - [ ] inactive but referenced
-  - [ ] group too large
+- [x] `/tags` 增加 stats view
+- [x] Tag 详情页显示 usage trend
+- [x] 分组页显示“建议整理”列表：
+  - [x] too common
+  - [x] rarely used
+  - [x] duplicate mapping
+  - [x] inactive but referenced
+  - [x] group too large
 
 ### 验收
-- 能回答“哪些标签太常用，可能需要拆分”
-- 能回答“哪些标签几乎不用，可能可以停用”
-- 能发现 field mapping 重复的 tag
+- [x] 能回答“哪些标签太常用，可能需要拆分”
+- [x] 能回答“哪些标签几乎不用，可能可以停用”
+- [x] 能发现 field mapping 重复的 tag
 
 ---
 

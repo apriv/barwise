@@ -31,6 +31,45 @@ export type LabelDictionaryItemWithUsage = LabelDictionaryItem & {
   usage_count: number;
 };
 
+export type DictionaryGroupStats = {
+  category: LabelCategory;
+  group_name: string;
+  tag_count: number;
+  active_count: number;
+  usage_count: number;
+};
+
+export type DictionarySuggestion = {
+  kind:
+    | "too_common"
+    | "rarely_used"
+    | "duplicate_mapping"
+    | "inactive_referenced"
+    | "group_too_large";
+  category: LabelCategory;
+  group_name: string;
+  key?: string;
+  label: string;
+  detail: string;
+  usage_count: number;
+  related_keys?: string[];
+};
+
+export type DictionaryStats = {
+  tag_count: number;
+  active_count: number;
+  inactive_count: number;
+  usage_count: number;
+  group_stats: DictionaryGroupStats[];
+  suggestions: DictionarySuggestion[];
+};
+
+export type TagSessionUsage = {
+  session_id: number;
+  session_date: string;
+  count: number;
+};
+
 export type UpsertDictionaryItemInput = {
   category: LabelCategory;
   groupName: string;
@@ -234,6 +273,203 @@ export function listDictionaryItemsWithUsage(
     ...item,
     usage_count: counts.get(`${item.category}:${item.key}`) ?? 0,
   })) as LabelDictionaryItemWithUsage[];
+}
+
+function normalizeMapping(value: string) {
+  try {
+    return JSON.stringify(parseFieldMappingJson(value));
+  } catch {
+    return value.trim();
+  }
+}
+
+function buildGroupStats(items: LabelDictionaryItemWithUsage[]) {
+  const groups = new Map<string, DictionaryGroupStats>();
+
+  for (const item of items) {
+    const key = `${item.category}:${item.group_name}`;
+    const current =
+      groups.get(key) ??
+      ({
+        category: item.category,
+        group_name: item.group_name,
+        tag_count: 0,
+        active_count: 0,
+        usage_count: 0,
+      } satisfies DictionaryGroupStats);
+
+    current.tag_count += 1;
+    current.active_count += item.is_active ? 1 : 0;
+    current.usage_count += item.usage_count;
+    groups.set(key, current);
+  }
+
+  return Array.from(groups.values()).sort((a, b) => {
+    if (a.category !== b.category) return a.category.localeCompare(b.category);
+    return a.group_name.localeCompare(b.group_name);
+  });
+}
+
+function buildSuggestions(
+  items: LabelDictionaryItemWithUsage[],
+  groupStats: DictionaryGroupStats[],
+) {
+  const suggestions: DictionarySuggestion[] = [];
+  const activeItems = items.filter((item) => item.is_active);
+  const totalUsage = items.reduce((sum, item) => sum + item.usage_count, 0);
+  const commonThreshold = Math.max(5, Math.ceil(totalUsage * 0.2));
+
+  for (const item of activeItems) {
+    if (item.usage_count >= commonThreshold) {
+      suggestions.push({
+        kind: "too_common",
+        category: item.category,
+        group_name: item.group_name,
+        key: item.key,
+        label: item.label,
+        detail: "High usage; consider whether this tag should be split into more precise tags.",
+        usage_count: item.usage_count,
+      });
+    }
+
+    if (item.usage_count === 0) {
+      suggestions.push({
+        kind: "rarely_used",
+        category: item.category,
+        group_name: item.group_name,
+        key: item.key,
+        label: item.label,
+        detail: "No saved annotations currently use this active tag.",
+        usage_count: item.usage_count,
+      });
+    }
+  }
+
+  for (const item of items) {
+    if (!item.is_active && item.usage_count > 0) {
+      suggestions.push({
+        kind: "inactive_referenced",
+        category: item.category,
+        group_name: item.group_name,
+        key: item.key,
+        label: item.label,
+        detail: "Inactive tag still appears in historical annotations.",
+        usage_count: item.usage_count,
+      });
+    }
+  }
+
+  const byMapping = new Map<string, LabelDictionaryItemWithUsage[]>();
+  for (const item of activeItems) {
+    const mappingKey = `${item.category}:${normalizeMapping(item.field_mapping_json)}`;
+    byMapping.set(mappingKey, [...(byMapping.get(mappingKey) ?? []), item]);
+  }
+
+  for (const duplicates of byMapping.values()) {
+    if (duplicates.length < 2) continue;
+    const [first] = duplicates;
+    suggestions.push({
+      kind: "duplicate_mapping",
+      category: first.category,
+      group_name: first.group_name,
+      key: first.key,
+      label: first.label,
+      detail: "Multiple active tags have the same field mapping.",
+      usage_count: duplicates.reduce((sum, item) => sum + item.usage_count, 0),
+      related_keys: duplicates.map((item) => item.key),
+    });
+  }
+
+  for (const group of groupStats) {
+    if (group.active_count > 12) {
+      suggestions.push({
+        kind: "group_too_large",
+        category: group.category,
+        group_name: group.group_name,
+        label: group.group_name,
+        detail: "Large active group; consider splitting it into smaller UI groups.",
+        usage_count: group.usage_count,
+      });
+    }
+  }
+
+  return suggestions.sort((a, b) => {
+    const severity = {
+      inactive_referenced: 0,
+      duplicate_mapping: 1,
+      too_common: 2,
+      group_too_large: 3,
+      rarely_used: 4,
+    } satisfies Record<DictionarySuggestion["kind"], number>;
+
+    return severity[a.kind] - severity[b.kind] || b.usage_count - a.usage_count;
+  });
+}
+
+export function getDictionaryStats(category?: LabelCategory, db?: Database) {
+  const items = listDictionaryItemsWithUsage(category, db);
+  const groupStats = buildGroupStats(items);
+
+  return {
+    tag_count: items.length,
+    active_count: items.filter((item) => item.is_active).length,
+    inactive_count: items.filter((item) => !item.is_active).length,
+    usage_count: items.reduce((sum, item) => sum + item.usage_count, 0),
+    group_stats: groupStats,
+    suggestions: buildSuggestions(items, groupStats),
+  } satisfies DictionaryStats;
+}
+
+export function listRecentUsageForTag(
+  category: LabelCategory,
+  key: string,
+  limit = 8,
+  db?: Database,
+) {
+  const targetDb = database(db);
+
+  if (category === "bar" || category === "context") {
+    const table = category === "bar" ? "bar_tags" : "context_tags";
+    if (!tableExists(table, targetDb)) return [] as TagSessionUsage[];
+
+    return targetDb
+      .prepare(
+        `
+        SELECT
+          sessions.id AS session_id,
+          sessions.session_date,
+          COUNT(*) AS count
+        FROM ${table}
+        INNER JOIN bars ON bars.id = ${table}.bar_id
+        INNER JOIN sessions ON sessions.id = bars.session_id
+        WHERE ${table}.tag_key = ?
+        GROUP BY sessions.id
+        ORDER BY sessions.session_date DESC
+        LIMIT ?
+      `,
+      )
+      .all(key, limit) as TagSessionUsage[];
+  }
+
+  const table = category === "segment" ? "segment_tags" : "outcome_tags";
+  if (!tableExists(table, targetDb)) return [] as TagSessionUsage[];
+
+  return targetDb
+    .prepare(
+      `
+      SELECT
+        sessions.id AS session_id,
+        sessions.session_date,
+        COUNT(*) AS count
+      FROM ${table}
+      INNER JOIN sessions ON sessions.id = ${table}.session_id
+      WHERE ${table}.tag_key = ?
+      GROUP BY sessions.id
+      ORDER BY sessions.session_date DESC
+      LIMIT ?
+    `,
+    )
+    .all(key, limit) as TagSessionUsage[];
 }
 
 export function upsertDictionaryItem(

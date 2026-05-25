@@ -13,6 +13,7 @@ import {
   getDictionaryItem,
   getDictionaryItemByKey,
   listDictionaryItemsWithUsage,
+  listRecentUsageForTag,
 } from "@/lib/repo/dictionary";
 
 const categories: LabelCategory[] = ["bar", "segment", "context", "outcome"];
@@ -74,6 +75,7 @@ export default async function TagDetailPage({
     listDictionaryItemsWithUsage(item.category).find(
       (entry) => entry.category === item.category && entry.key === item.key,
     )?.usage_count ?? 0;
+  const recentUsage = listRecentUsageForTag(item.category, item.key);
 
   return (
     <main className="flex flex-1 justify-center px-6 py-8">
@@ -116,6 +118,37 @@ export default async function TagDetailPage({
             <div className="mt-1 font-mono text-sm">{usage}</div>
           </div>
         </div>
+
+        <section className="rounded border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950/60">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-zinc-950 dark:text-zinc-100">
+              Recent usage
+            </h2>
+            <span className="font-mono text-xs text-zinc-500">
+              {recentUsage.length}
+            </span>
+          </div>
+          <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
+            {recentUsage.map((entry) => (
+              <div key={entry.session_id} className="flex items-center justify-between gap-4 py-2 first:pt-0 last:pb-0">
+                <Link
+                  href={`/sessions/${entry.session_id}`}
+                  className="text-sm font-medium text-zinc-900 hover:text-zinc-600 dark:text-zinc-100 dark:hover:text-white"
+                >
+                  {entry.session_date}
+                </Link>
+                <span className="font-mono text-sm text-zinc-500">
+                  {entry.count}
+                </span>
+              </div>
+            ))}
+            {recentUsage.length === 0 ? (
+              <div className="py-4 text-sm text-zinc-500">
+                This tag has not been used in saved annotations yet.
+              </div>
+            ) : null}
+          </div>
+        </section>
 
         <form action={saveDictionaryItem} className="grid gap-4 rounded border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950/60 md:grid-cols-2">
           <input type="hidden" name="key" value={item.key} />
