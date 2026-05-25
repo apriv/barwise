@@ -138,6 +138,10 @@ export function Chart({
     });
   }, [bars, segmentTagMarkers]);
 
+  const numberedBars = useMemo(() => {
+    return bars.filter((bar) => bar.barNumber % 3 === 0);
+  }, [bars]);
+
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -260,7 +264,22 @@ export function Chart({
         }),
       );
 
-      markers.push(...barMarkers, ...savedSegmentMarkers, ...contextMarkers);
+      const barNumberMarkers: SeriesMarker<Time>[] = numberedBars.map((bar) => ({
+        id: `bar-number-${bar.id}`,
+        time: bar.time as UTCTimestamp,
+        position: "belowBar",
+        shape: "circle",
+        color: "#52525b",
+        text: String(bar.barNumber),
+        size: 0.16,
+      }));
+
+      markers.push(
+        ...barMarkers,
+        ...savedSegmentMarkers,
+        ...contextMarkers,
+        ...barNumberMarkers,
+      );
     }
 
     const rangeMarkers: SeriesMarker<Time>[] = selectedRangeBars.map((bar, index) => {
@@ -301,6 +320,7 @@ export function Chart({
   }, [
     contextBars,
     labeledBars,
+    numberedBars,
     savedSegmentBars,
     selectedBar,
     selectedRangeBars,
