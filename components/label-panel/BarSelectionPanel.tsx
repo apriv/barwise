@@ -1,7 +1,12 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useMemo, useOptimistic, useState, useTransition } from "react";
+import {
+  useMemo,
+  useOptimistic,
+  useState,
+  useTransition,
+} from "react";
 
 import type { ChartBar } from "@/components/chart/Chart";
 import {
@@ -50,6 +55,41 @@ function groupOptions(options: LabelDictionaryItem[]) {
   }, {});
 }
 
+function countUsage(tagKeys: string[]) {
+  return tagKeys.reduce<Record<string, number>>((counts, tagKey) => {
+    counts[tagKey] = (counts[tagKey] ?? 0) + 1;
+    return counts;
+  }, {});
+}
+
+function filterAndSortOptions(
+  options: LabelDictionaryItem[],
+  query: string,
+  usageCounts: Record<string, number>,
+) {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  return options
+    .filter((option) => {
+      if (!normalizedQuery) return true;
+
+      return [
+        option.key,
+        option.label,
+        option.description ?? "",
+        option.group_name,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedQuery);
+    })
+    .toSorted((a, b) => {
+      const usageDelta = (usageCounts[b.key] ?? 0) - (usageCounts[a.key] ?? 0);
+      if (usageDelta !== 0) return usageDelta;
+      return a.sort_order - b.sort_order || a.label.localeCompare(b.label);
+    });
+}
+
 const groupLabels: Record<string, string> = {
   bar_quality: "Bar Quality",
   bar_role: "Bar Role",
@@ -66,6 +106,24 @@ function formatGroupName(groupName: string) {
   return groupLabels[groupName] ?? groupName.replaceAll("_", " ");
 }
 
+function TagSearchInput({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <input
+      type="search"
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      placeholder="Search tags"
+      className="h-9 w-full rounded border border-zinc-300 bg-white px-3 text-sm text-zinc-900 outline-none transition-colors placeholder:text-zinc-400 focus:border-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-600"
+    />
+  );
+}
+
 function TagGroup({
   groupName,
   options,
@@ -73,6 +131,7 @@ function TagGroup({
   selectedTags,
   upsertAction,
   deleteAction,
+  storageKey,
 }: {
   groupName: string;
   options: LabelDictionaryItem[];
@@ -80,6 +139,7 @@ function TagGroup({
   selectedTags: Set<string>;
   upsertAction: ToggleAction;
   deleteAction: ToggleAction;
+  storageKey: string;
 }) {
   const [optimisticTags, toggleOptimisticTag] = useOptimistic(
     selectedTags,
@@ -96,7 +156,20 @@ function TagGroup({
     },
   );
   const [isPending, startTransition] = useTransition();
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(() => {
+    if (typeof window === "undefined") return true;
+
+    try {
+      const stored = window.localStorage.getItem(storageKey);
+      if (stored !== null) {
+        return stored === "1";
+      }
+    } catch {
+      // Ignore localStorage failures; collapsed state is only a convenience.
+    }
+
+    return true;
+  });
 
   const selectedCount = options.filter((option) =>
     optimisticTags.has(option.key),
@@ -127,6 +200,18 @@ function TagGroup({
     });
   }
 
+  function toggleExpanded() {
+    setIsExpanded((value) => {
+      const next = !value;
+      try {
+        window.localStorage.setItem(storageKey, next ? "1" : "0");
+      } catch {
+        // Ignore localStorage failures.
+      }
+      return next;
+    });
+  }
+
   return (
     <fieldset className="space-y-3 rounded border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950/60">
       <div className="flex items-center justify-between gap-3">
@@ -140,7 +225,7 @@ function TagGroup({
           <button
             type="button"
             aria-expanded={isExpanded}
-            onClick={() => setIsExpanded((value) => !value)}
+            onClick={toggleExpanded}
             className="grid h-6 w-6 place-items-center rounded border border-zinc-300 bg-white font-mono text-xs text-zinc-500 transition-colors hover:border-zinc-400 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-500 dark:hover:border-zinc-700 dark:hover:text-zinc-200"
           >
             {isExpanded ? "-" : "+"}
@@ -170,6 +255,9 @@ function TagGroup({
               </button>
             );
           })}
+          {options.length === 0 ? (
+            <p className="text-xs text-zinc-500">No matching tags.</p>
+          ) : null}
         </div>
       ) : null}
     </fieldset>
@@ -190,6 +278,7 @@ export function BarSelectionPanel({
 }: BarSelectionPanelProps) {
   const searchParams = useSearchParams();
   const [showOhlc, setShowOhlc] = useState(false);
+  const [tagSearch, setTagSearch] = useState("");
   const [outcomeConfirmBarId, setOutcomeConfirmBarId] = useState<number | null>(
     null,
   );
@@ -227,24 +316,53 @@ export function BarSelectionPanel({
     };
   }, [bars, rangeEndNumber, rangeStartNumber]);
 
+  const barUsageCounts = useMemo(
+    () => countUsage(barTags.map((tag) => tag.tag_key)),
+    [barTags],
+  );
+
+  const contextUsageCounts = useMemo(
+    () => countUsage(contextTags.map((tag) => tag.tag_key)),
+    [contextTags],
+  );
+
+  const segmentUsageCounts = useMemo(
+    () => countUsage(segmentTags.map((tag) => tag.tag_key)),
+    [segmentTags],
+  );
+
+  const outcomeUsageCounts = useMemo(
+    () => countUsage(outcomeTags.map((tag) => tag.tag_key)),
+    [outcomeTags],
+  );
+
   const barOptionsByGroup = useMemo(
-    () => groupOptions(barTagOptions),
-    [barTagOptions],
+    () => groupOptions(filterAndSortOptions(barTagOptions, tagSearch, barUsageCounts)),
+    [barTagOptions, barUsageCounts, tagSearch],
   );
 
   const contextOptionsByGroup = useMemo(
-    () => groupOptions(contextTagOptions),
-    [contextTagOptions],
+    () =>
+      groupOptions(
+        filterAndSortOptions(contextTagOptions, tagSearch, contextUsageCounts),
+      ),
+    [contextTagOptions, contextUsageCounts, tagSearch],
   );
 
   const segmentOptionsByGroup = useMemo(
-    () => groupOptions(segmentTagOptions),
-    [segmentTagOptions],
+    () =>
+      groupOptions(
+        filterAndSortOptions(segmentTagOptions, tagSearch, segmentUsageCounts),
+      ),
+    [segmentTagOptions, segmentUsageCounts, tagSearch],
   );
 
   const outcomeOptionsByGroup = useMemo(
-    () => groupOptions(outcomeTagOptions),
-    [outcomeTagOptions],
+    () =>
+      groupOptions(
+        filterAndSortOptions(outcomeTagOptions, tagSearch, outcomeUsageCounts),
+      ),
+    [outcomeTagOptions, outcomeUsageCounts, tagSearch],
   );
 
   const selectedBarTagsSet = useMemo(() => {
@@ -323,6 +441,8 @@ export function BarSelectionPanel({
           </p>
         </div>
 
+        <TagSearchInput value={tagSearch} onChange={setTagSearch} />
+
         <section className="space-y-3">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
             Segment Tags
@@ -336,6 +456,7 @@ export function BarSelectionPanel({
               selectedTags={selectedSegmentTagsSet}
               upsertAction={upsertSegmentTag}
               deleteAction={deleteSegmentTag}
+              storageKey={`tag-panel:segment:${groupName}`}
             />
           ))}
         </section>
@@ -371,6 +492,7 @@ export function BarSelectionPanel({
               selectedTags={selectedOutcomeTagsSet}
               upsertAction={upsertOutcomeTag}
               deleteAction={deleteOutcomeTag}
+              storageKey={`tag-panel:outcome:${groupName}`}
             />
           ))}
         </section>
@@ -440,6 +562,8 @@ export function BarSelectionPanel({
         </dl>
       ) : null}
 
+      <TagSearchInput value={tagSearch} onChange={setTagSearch} />
+
       <div className="space-y-5">
         <section className="space-y-3">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
@@ -454,6 +578,7 @@ export function BarSelectionPanel({
               selectedTags={selectedBarTagsSet}
               upsertAction={upsertBarTag}
               deleteAction={deleteBarTag}
+              storageKey={`tag-panel:bar:${groupName}`}
             />
           ))}
         </section>
@@ -471,6 +596,7 @@ export function BarSelectionPanel({
               selectedTags={selectedContextTagsSet}
               upsertAction={upsertContextTag}
               deleteAction={deleteContextTag}
+              storageKey={`tag-panel:context:${groupName}`}
             />
           ))}
         </section>

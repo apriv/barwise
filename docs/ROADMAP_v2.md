@@ -288,13 +288,13 @@ source
 **目标：** 提高日常打标速度：搜索、折叠、最近、常用，让标签数量增加后仍然好用。
 
 ### 右侧标注面板
-- [ ] tag 搜索
+- [x] tag 搜索
 - [ ] 最近使用 tags
-- [ ] 当前 session 常用 tags
+- [x] 当前 session 常用 tags
 - [ ] 全局常用 tags
-- [ ] group 折叠状态持久化
+- [x] group 折叠状态持久化
 - [ ] active / inactive 的历史显示区分
-- [ ] tag tooltip 显示 description / example
+- [x] tag tooltip 显示 description / example
 - [ ] tag 详情入口
 
 ### 快速操作
@@ -304,8 +304,8 @@ source
 - [ ] note 编辑更明确：每个 tag 的 note 与整体 note 不混淆
 
 ### 验收
-- tag 数量变多后仍能快速找到目标 tag
-- 常用工作流不需要频繁滚动
+- [x] tag 数量变多后仍能快速找到目标 tag
+- [x] 常用工作流不需要频繁滚动
 - 历史 inactive tag 不影响继续标注
 
 ---
