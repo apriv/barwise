@@ -4,8 +4,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CandlestickSeries,
   createChart,
+  createSeriesMarkers,
   type IChartApi,
+  type ISeriesMarkersPluginApi,
   type MouseEventParams,
+  type SeriesMarker,
+  type Time,
   type UTCTimestamp,
 } from "lightweight-charts";
 
@@ -22,6 +26,7 @@ export type ChartBar = {
 
 type ChartProps = {
   bars: ChartBar[];
+  selectedBarNumber?: number | null;
   onSelectBar?: (bar: ChartBar) => void;
 };
 
@@ -29,14 +34,22 @@ function formatPrice(value: number) {
   return value.toFixed(2);
 }
 
-export function Chart({ bars, onSelectBar }: ChartProps) {
+export function Chart({ bars, selectedBarNumber, onSelectBar }: ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
+  const selectedMarkerRef = useRef<ISeriesMarkersPluginApi<Time> | null>(
+    null,
+  );
   const [hoveredBar, setHoveredBar] = useState<ChartBar | null>(bars[0] ?? null);
 
   const barsByTime = useMemo(() => {
     return new Map(bars.map((bar) => [bar.time, bar]));
   }, [bars]);
+
+  const selectedBar = useMemo(() => {
+    if (!Number.isInteger(selectedBarNumber)) return null;
+    return bars.find((bar) => bar.barNumber === selectedBarNumber) ?? null;
+  }, [bars, selectedBarNumber]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -81,6 +94,10 @@ export function Chart({ bars, onSelectBar }: ChartProps) {
         close: bar.close,
       })),
     );
+    selectedMarkerRef.current = createSeriesMarkers(series, [], {
+      autoScale: true,
+      zOrder: "top",
+    });
 
     function handleCrosshairMove(param: MouseEventParams) {
       if (typeof param.time === "number") {
@@ -106,10 +123,34 @@ export function Chart({ bars, onSelectBar }: ChartProps) {
     return () => {
       chart.unsubscribeCrosshairMove(handleCrosshairMove);
       chart.unsubscribeClick(handleClick);
+      selectedMarkerRef.current?.detach();
+      selectedMarkerRef.current = null;
       chart.remove();
       chartRef.current = null;
     };
   }, [bars, barsByTime, onSelectBar]);
+
+  useEffect(() => {
+    const markerApi = selectedMarkerRef.current;
+    if (!markerApi) return;
+
+    if (!selectedBar) {
+      markerApi.setMarkers([]);
+      return;
+    }
+
+    const selectedMarker: SeriesMarker<Time> = {
+      id: `selected-bar-${selectedBar.id}`,
+      time: selectedBar.time as UTCTimestamp,
+      position: "belowBar",
+      shape: "circle",
+      color: "#facc15",
+      text: `#${selectedBar.barNumber}`,
+      size: 1.25,
+    };
+
+    markerApi.setMarkers([selectedMarker]);
+  }, [selectedBar]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">

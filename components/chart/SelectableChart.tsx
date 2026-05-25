@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 
 import { Chart, type ChartBar } from "@/components/chart/Chart";
 
@@ -9,6 +9,13 @@ export function SelectableChart({ bars }: { bars: ChartBar[] }) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const selectedBarNumber = useMemo(() => {
+    const rawBar = searchParams.get("bar");
+    if (rawBar === null) return null;
+
+    const barNumber = Number(rawBar);
+    return Number.isInteger(barNumber) ? barNumber : null;
+  }, [searchParams]);
 
   const selectBar = useCallback(
     (bar: ChartBar) => {
@@ -21,5 +28,11 @@ export function SelectableChart({ bars }: { bars: ChartBar[] }) {
     [pathname, router, searchParams],
   );
 
-  return <Chart bars={bars} onSelectBar={selectBar} />;
+  return (
+    <Chart
+      bars={bars}
+      selectedBarNumber={selectedBarNumber}
+      onSelectBar={selectBar}
+    />
+  );
 }
