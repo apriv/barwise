@@ -98,12 +98,12 @@
 - [x] Outcome 类标签**V1 不实现**，挪到"未来（先不做）"
 
 ### 收尾任务（M4 启动前要完成）
-- [ ] 写 migration `002_tag_model.sql`：DROP 旧三表 + label_dictionary 清空 + CREATE 新三表 + ALTER `label_dictionary` 列名
-- [ ] 写新 dictionary seed：根据 `LABEL_DICTIONARY.md` 把所有 visible tag 灌入 `label_dictionary`
-- [ ] 删除/重写 `lib/repo/labels.ts`、`lib/actions/label.ts` 中针对旧 schema 的代码（M2 写的 bar_labels CRUD 需要适配 bar_tags + 多选语义）
-- [ ] 适配 `components/label-panel/BarSelectionPanel.tsx`：从"每 field 单选 radio"改为"每 group 多 tag checkbox"
-- [ ] 更新 `UI_DESIGN.md`：UI 分组（Bar Shape / Bar Pattern / Segment / Context）、tag 多选交互、M5 显示规则草稿
-- [ ] 标注 SOP：在 `LABEL_DICTIONARY.md` 已加"标注 SOP"小节，跑一段时间后视情况补充
+- [x] 写 migration `002_tag_model.sql`：DROP 旧三表 + label_dictionary 清空 + CREATE 新三表 + ALTER `label_dictionary` 列名
+- [x] 写新 dictionary seed：根据 `LABEL_DICTIONARY.md` 把所有 visible tag 灌入 `label_dictionary`
+- [x] 删除/重写 `lib/repo/labels.ts`、`lib/actions/label.ts` 中针对旧 schema 的代码（M2 写的 bar_labels CRUD 需要适配 bar_tags + 多选语义）
+- [x] 适配 `components/label-panel/BarSelectionPanel.tsx`：从"每 field 单选 radio"改为"每 group 多 tag checkbox"
+- [x] 更新 `UI_DESIGN.md`：UI 分组（Bar Shape / Bar Pattern / Segment / Context）、tag 多选交互、M5 显示规则草稿
+- [x] 标注 SOP：在 `LABEL_DICTIONARY.md` 已加"标注 SOP"小节，跑一段时间后视情况补充
 
 ### 不做
 
