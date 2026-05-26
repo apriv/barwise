@@ -320,31 +320,20 @@ source
 
 ## M6 — Lightweight Annotation Layer
 
-**目标：** 在图上更直观地表达关键价格行为结构，但不做通用 TradingView 绘图系统。
+**目标：** 在图上更直观地表达关键价格行为结构
 
-### 显示类型
-- [ ] Trading Range 框
+### 显示
+- [x] 1 entry bar：`long_entry` 在下方画绿色向上箭头；`short_entry` 在上方画红色向下箭头。
+- [x] 2 wedge up/down，紫色虚线标记
+- [x] Trading Range 框
+- [x] double top / double bottom 线
+- [x] expanding triangle 线
 - [ ] trend / channel 线
-- [ ] double top / double bottom 线
-- [ ] entry bar ：如果是阳线，在下方画绿色向上箭头，表示是做多信号；阴线反之。
 - [ ] breakout / failed breakout marker
 - [ ] outcome marker
+- [x] 不要每次改变tag顺序
+- 快捷键 1long entry 2short entry, 
 
-### 数据来源
-- [ ] 优先从 existing tags 派生显示：
-  - [ ] `trading_range` → range box
-  - [ ] `bull_channel` / `bear_channel` → channel line
-  - [ ] `double_top` / `double_bottom` → horizontal line
-  - [ ] `entry_bar` → arrow
-  - [ ] outcome tags → result marker
-- [ ] 不新增自由画线数据模型，除非 tag 派生不够用
-
-### 交互
-- [ ] 支持显示/隐藏 annotation layer
-- [ ] hover annotation 显示 tag summary
-- [ ] 点击 annotation 选中对应 bar/range
-- [ ] 当前选择相关 annotation 高亮，其它淡化
-- [ ] 避免遮挡 K 线主体和价格轴
 
 ### 验收
 - TR 框、trend 线、double top 线能根据 segment tags 自动显示

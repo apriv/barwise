@@ -66,11 +66,18 @@ export default async function SessionPage({ params }: PageProps) {
   const segmentTags = listSegmentTagsForSession(session.id);
   const outcomeTags = listOutcomeTagsForSession(session.id);
   const barTagMarkers: BarTagMarker[] = Array.from(
-    barTags.reduce<Map<number, number>>((counts, tag) => {
-      counts.set(tag.bar_number, (counts.get(tag.bar_number) ?? 0) + 1);
-      return counts;
+    barTags.reduce<Map<number, BarTagMarker>>((markers, tag) => {
+      const existing = markers.get(tag.bar_number);
+
+      markers.set(tag.bar_number, {
+        barNumber: tag.bar_number,
+        count: (existing?.count ?? 0) + 1,
+        tagKeys: [...(existing?.tagKeys ?? []), tag.tag_key],
+      });
+
+      return markers;
     }, new Map()),
-    ([barNumber, count]) => ({ barNumber, count }),
+    ([, marker]) => marker,
   );
   const contextTagMarkers: ContextTagMarker[] = Array.from(
     contextTags.reduce<Map<number, number>>((counts, tag) => {
@@ -96,6 +103,7 @@ export default async function SessionPage({ params }: PageProps) {
         startBarNumber,
         endBarNumber,
         count: (existing?.count ?? 0) + 1,
+        tagKeys: [...(existing?.tagKeys ?? []), tag.tag_key],
       });
 
       return markers;

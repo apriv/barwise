@@ -168,6 +168,21 @@ export function listDictionaryItems(category?: LabelCategory, db?: Database) {
   return (category ? stmt.all(category) : stmt.all()) as LabelDictionaryItem[];
 }
 
+export function listDictionaryGroups(category?: LabelCategory, db?: Database) {
+  const sql = `
+    SELECT DISTINCT group_name
+    FROM label_dictionary
+    ${category ? "WHERE category = ?" : ""}
+    ORDER BY group_name ASC
+  `;
+  const stmt = database(db).prepare(sql);
+  const rows = (category ? stmt.all(category) : stmt.all()) as {
+    group_name: string;
+  }[];
+
+  return rows.map((row) => row.group_name);
+}
+
 export function getDictionaryItem(
   category: LabelCategory,
   key: string,

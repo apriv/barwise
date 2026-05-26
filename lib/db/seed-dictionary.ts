@@ -74,8 +74,21 @@ const dictionarySeeds: DictionarySeed[] = [
   {
     category: "bar",
     group_name: "bar_role",
-    key: "entry_bar",
-    label: "进场线",
+    key: "climax",
+    label: "高潮线",
+    description: "买卖压力高潮的单根 K 线",
+  },
+  {
+    category: "bar",
+    group_name: "bar_role",
+    key: "long_entry",
+    label: "做多进场线",
+  },
+  {
+    category: "bar",
+    group_name: "bar_role",
+    key: "short_entry",
+    label: "做空进场线",
   },
   {
     category: "bar",
@@ -109,6 +122,27 @@ const dictionarySeeds: DictionarySeed[] = [
     key: "breakout_attempt",
     label: "突破尝试",
     description: "试图破近期 swing high/low",
+  },
+  {
+    category: "segment",
+    group_name: "segment_kind",
+    key: "wedge_up",
+    label: "上升楔形",
+    description: "连接首尾高点的楔形",
+  },
+  {
+    category: "segment",
+    group_name: "segment_kind",
+    key: "wedge_down",
+    label: "下降楔形",
+    description: "连接首尾低点的楔形",
+  },
+  {
+    category: "segment",
+    group_name: "segment_kind",
+    key: "expanding_triangle",
+    label: "扩张三角形",
+    description: "高低点逐渐扩张的结构",
   },
   {
     category: "segment",

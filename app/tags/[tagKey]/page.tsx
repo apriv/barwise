@@ -7,11 +7,13 @@ import {
   saveDictionaryItem,
   setDictionaryItemActiveFromForm,
 } from "@/lib/actions/dictionary";
+import { GroupField } from "@/components/tag-form/GroupField";
 import { ensureDatabase } from "@/lib/db/ensure";
 import type { LabelCategory, LabelSource } from "@/lib/repo/dictionary";
 import {
   getDictionaryItem,
   getDictionaryItemByKey,
+  listDictionaryGroups,
   listDictionaryItemsWithUsage,
   listRecentUsageForTag,
 } from "@/lib/repo/dictionary";
@@ -76,6 +78,7 @@ export default async function TagDetailPage({
       (entry) => entry.category === item.category && entry.key === item.key,
     )?.usage_count ?? 0;
   const recentUsage = listRecentUsageForTag(item.category, item.key);
+  const groups = listDictionaryGroups(item.category);
 
   return (
     <main className="flex flex-1 justify-center px-6 py-8">
@@ -170,15 +173,7 @@ export default async function TagDetailPage({
               {categoryLabel(item.category)}
             </div>
           </div>
-          <label className="space-y-1 text-sm">
-            <span className="text-xs font-medium uppercase text-zinc-500">Group</span>
-            <input
-              required
-              name="groupName"
-              defaultValue={item.group_name}
-              className="w-full rounded border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950"
-            />
-          </label>
+          <GroupField defaultValue={item.group_name} groups={groups} />
           <label className="space-y-1 text-sm">
             <span className="text-xs font-medium uppercase text-zinc-500">Sort order</span>
             <input
@@ -256,6 +251,8 @@ export default async function TagDetailPage({
                 required
                 name="newKey"
                 defaultValue={item.key}
+                pattern="[a-z0-9_]+"
+                title="Use lowercase letters, numbers, and underscores. To change the visible name, edit Display name above."
                 className="w-full rounded border border-zinc-300 bg-white px-3 py-2 font-mono dark:border-zinc-800 dark:bg-zinc-950"
               />
             </label>

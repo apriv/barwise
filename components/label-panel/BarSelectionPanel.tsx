@@ -57,17 +57,9 @@ function groupOptions(options: LabelDictionaryItem[]) {
   }, {});
 }
 
-function countUsage(tagKeys: string[]) {
-  return tagKeys.reduce<Record<string, number>>((counts, tagKey) => {
-    counts[tagKey] = (counts[tagKey] ?? 0) + 1;
-    return counts;
-  }, {});
-}
-
 function filterAndSortOptions(
   options: LabelDictionaryItem[],
   query: string,
-  usageCounts: Record<string, number>,
 ) {
   const normalizedQuery = query.trim().toLowerCase();
 
@@ -85,11 +77,9 @@ function filterAndSortOptions(
         .toLowerCase()
         .includes(normalizedQuery);
     })
-    .toSorted((a, b) => {
-      const usageDelta = (usageCounts[b.key] ?? 0) - (usageCounts[a.key] ?? 0);
-      if (usageDelta !== 0) return usageDelta;
-      return a.sort_order - b.sort_order || a.label.localeCompare(b.label);
-    });
+    .toSorted(
+      (a, b) => a.sort_order - b.sort_order || a.label.localeCompare(b.label),
+    );
 }
 
 const groupLabels: Record<string, string> = {
@@ -106,6 +96,76 @@ const groupLabels: Record<string, string> = {
 
 function formatGroupName(groupName: string) {
   return groupLabels[groupName] ?? groupName.replaceAll("_", " ");
+}
+
+function TagLeadingIcon({ tagKey }: { tagKey: string }) {
+  if (tagKey === "long_entry") {
+    return (
+      <span
+        aria-hidden="true"
+        className="text-sm leading-none text-emerald-500 dark:text-emerald-400"
+      >
+        ▲
+      </span>
+    );
+  }
+
+  if (tagKey === "short_entry") {
+    return (
+      <span
+        aria-hidden="true"
+        className="text-sm leading-none text-red-500 dark:text-red-400"
+      >
+        ▼
+      </span>
+    );
+  }
+
+  if (tagKey === "wedge_up" || tagKey === "wedge_down") {
+    return (
+      <span
+        aria-hidden="true"
+        className="h-3.5 w-4 shrink-0 border-t-2 border-dotted border-violet-400"
+        style={{ transform: `rotate(${tagKey === "wedge_up" ? -25 : 25}deg)` }}
+      />
+    );
+  }
+
+  if (tagKey === "trading_range") {
+    return (
+      <span
+        aria-hidden="true"
+        className="h-3 w-4 shrink-0 bg-blue-700/25 dark:bg-blue-400/25"
+      />
+    );
+  }
+
+  if (tagKey === "double_top" || tagKey === "double_bottom") {
+    return (
+      <span
+        aria-hidden="true"
+        className={
+          "font-mono text-[11px] font-bold leading-none " +
+          (tagKey === "double_top"
+            ? "text-red-500 dark:text-red-400"
+            : "text-emerald-500 dark:text-emerald-400")
+        }
+      >
+        {tagKey === "double_top" ? "M" : "W"}
+      </span>
+    );
+  }
+
+  if (tagKey === "expanding_triangle") {
+    return (
+      <span
+        aria-hidden="true"
+        className="h-0 w-0 shrink-0 border-y-[6px] border-r-[10px] border-y-transparent border-r-orange-500"
+      />
+    );
+  }
+
+  return null;
 }
 
 function TagSearchInput({
@@ -266,13 +326,14 @@ function TagGroup({
                 onClick={() => handleToggle(option.key)}
                 title={option.description ?? undefined}
                 className={
-                  "min-h-8 rounded border px-2.5 py-1.5 text-left text-xs font-medium transition-colors disabled:cursor-wait disabled:opacity-70 " +
+                  "inline-flex min-h-8 items-center gap-1.5 rounded border px-2.5 py-1.5 text-left text-xs font-medium transition-colors disabled:cursor-wait disabled:opacity-70 " +
                   (selected
                     ? "border-emerald-500/70 bg-emerald-50 text-emerald-800 dark:border-emerald-500/80 dark:bg-emerald-500/15 dark:text-emerald-100 shadow-[0_0_0_1px_rgba(52,211,153,0.18)]"
                     : "border-zinc-300 bg-white text-zinc-700 hover:border-zinc-400 hover:bg-zinc-100 hover:text-zinc-950 dark:border-zinc-800 dark:bg-zinc-900/40 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:bg-zinc-900 dark:hover:text-zinc-100")
                 }
               >
-                {option.label}
+                <TagLeadingIcon tagKey={option.key} />
+                <span>{option.label}</span>
               </button>
             );
           })}
@@ -337,53 +398,33 @@ export function BarSelectionPanel({
     };
   }, [bars, rangeEndNumber, rangeStartNumber]);
 
-  const barUsageCounts = useMemo(
-    () => countUsage(barTags.map((tag) => tag.tag_key)),
-    [barTags],
-  );
-
-  const contextUsageCounts = useMemo(
-    () => countUsage(contextTags.map((tag) => tag.tag_key)),
-    [contextTags],
-  );
-
-  const segmentUsageCounts = useMemo(
-    () => countUsage(segmentTags.map((tag) => tag.tag_key)),
-    [segmentTags],
-  );
-
-  const outcomeUsageCounts = useMemo(
-    () => countUsage(outcomeTags.map((tag) => tag.tag_key)),
-    [outcomeTags],
-  );
-
   const barOptionsByGroup = useMemo(
-    () => groupOptions(filterAndSortOptions(barTagOptions, tagSearch, barUsageCounts)),
-    [barTagOptions, barUsageCounts, tagSearch],
+    () => groupOptions(filterAndSortOptions(barTagOptions, tagSearch)),
+    [barTagOptions, tagSearch],
   );
 
   const contextOptionsByGroup = useMemo(
     () =>
       groupOptions(
-        filterAndSortOptions(contextTagOptions, tagSearch, contextUsageCounts),
+        filterAndSortOptions(contextTagOptions, tagSearch),
       ),
-    [contextTagOptions, contextUsageCounts, tagSearch],
+    [contextTagOptions, tagSearch],
   );
 
   const segmentOptionsByGroup = useMemo(
     () =>
       groupOptions(
-        filterAndSortOptions(segmentTagOptions, tagSearch, segmentUsageCounts),
+        filterAndSortOptions(segmentTagOptions, tagSearch),
       ),
-    [segmentTagOptions, segmentUsageCounts, tagSearch],
+    [segmentTagOptions, tagSearch],
   );
 
   const outcomeOptionsByGroup = useMemo(
     () =>
       groupOptions(
-        filterAndSortOptions(outcomeTagOptions, tagSearch, outcomeUsageCounts),
+        filterAndSortOptions(outcomeTagOptions, tagSearch),
       ),
-    [outcomeTagOptions, outcomeUsageCounts, tagSearch],
+    [outcomeTagOptions, tagSearch],
   );
 
   const selectedBarTagsSet = useMemo(() => {

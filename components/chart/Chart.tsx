@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CandlestickSeries,
   createChart,
   createSeriesMarkers,
+  LineSeries,
+  LineStyle,
   type IChartApi,
   type ISeriesMarkersPluginApi,
+  type ISeriesApi,
+  type LineData,
   type MouseEventParams,
   type SeriesMarker,
   type Time,
@@ -27,12 +31,14 @@ export type ChartBar = {
 export type BarTagMarker = {
   barNumber: number;
   count: number;
+  tagKeys: string[];
 };
 
 export type SegmentTagMarker = {
   startBarNumber: number;
   endBarNumber: number;
   count: number;
+  tagKeys: string[];
 };
 
 export type ContextTagMarker = {
@@ -56,44 +62,54 @@ type ChartProps = {
   onSelectBar?: (bar: ChartBar, meta: { rangeMode: boolean }) => void;
 };
 
+type TradingRangeOverlay = {
+  id: string;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+
 function formatPrice(value: number) {
   return value.toFixed(2);
+}
+
+function removeWedgeSeries(
+  chart: IChartApi | null,
+  seriesList: ISeriesApi<"Line", Time>[],
+) {
+  if (!chart) return;
+
+  for (const series of seriesList) {
+    try {
+      chart.removeSeries(series);
+    } catch {
+      // The chart can already have removed child series during teardown.
+    }
+  }
 }
 
 export function Chart({
   bars,
   barTagMarkers = [],
-  contextTagMarkers = [],
   segmentTagMarkers = [],
-  outcomeTagMarkers = [],
   selectedBarNumber,
   selectedRange,
   onSelectBar,
 }: ChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
+  const candleSeriesRef = useRef<ISeriesApi<"Candlestick", Time> | null>(null);
   const selectedMarkerRef = useRef<ISeriesMarkersPluginApi<Time> | null>(
     null,
   );
+  const annotationLineSeriesRef = useRef<ISeriesApi<"Line", Time>[]>([]);
+  const [tradingRangeOverlays, setTradingRangeOverlays] = useState<
+    TradingRangeOverlay[]
+  >([]);
+  const [chartReadyToken, setChartReadyToken] = useState(0);
   const [hoveredBar, setHoveredBar] = useState<ChartBar | null>(bars[0] ?? null);
   const [showSavedMarkers, setShowSavedMarkers] = useState(true);
-  const [isDarkTheme, setIsDarkTheme] = useState(true);
-
-  useEffect(() => {
-    function syncTheme() {
-      setIsDarkTheme(document.documentElement.classList.contains("dark"));
-    }
-
-    syncTheme();
-
-    const observer = new MutationObserver(syncTheme);
-    observer.observe(document.documentElement, {
-      attributeFilter: ["class"],
-      attributes: true,
-    });
-
-    return () => observer.disconnect();
-  }, []);
 
   const barsByTime = useMemo(() => {
     return new Map(bars.map((bar) => [bar.time, bar]));
@@ -116,90 +132,238 @@ export function Chart({
   }, [bars, selectedRange]);
 
   const labeledBars = useMemo(() => {
-    const countsByBarNumber = new Map(
-      barTagMarkers.map((marker) => [marker.barNumber, marker.count]),
+    const markersByBarNumber = new Map(
+      barTagMarkers.map((marker) => [marker.barNumber, marker]),
     );
 
     return bars
-      .map((bar) => ({
-        bar,
-        count: countsByBarNumber.get(bar.barNumber) ?? 0,
-      }))
-      .filter((marker) => marker.count > 0);
-  }, [bars, barTagMarkers]);
-
-  const contextBars = useMemo(() => {
-    const countsByBarNumber = new Map(
-      contextTagMarkers.map((marker) => [marker.barNumber, marker.count]),
-    );
-
-    return bars
-      .map((bar) => ({
-        bar,
-        count: countsByBarNumber.get(bar.barNumber) ?? 0,
-      }))
-      .filter((marker) => marker.count > 0);
-  }, [bars, contextTagMarkers]);
-
-  const outcomeBars = useMemo(() => {
-    const countsByBarNumber = new Map(
-      outcomeTagMarkers.map((marker) => [marker.barNumber, marker.count]),
-    );
-
-    return bars
-      .map((bar) => ({
-        bar,
-        count: countsByBarNumber.get(bar.barNumber) ?? 0,
-      }))
-      .filter((marker) => marker.count > 0);
-  }, [bars, outcomeTagMarkers]);
-
-  const savedSegmentBars = useMemo(() => {
-    return segmentTagMarkers.flatMap((segment, segmentIndex) => {
-      const start = Math.min(segment.startBarNumber, segment.endBarNumber);
-      const end = Math.max(segment.startBarNumber, segment.endBarNumber);
-      const segmentBars = bars.filter(
-        (bar) => bar.barNumber >= start && bar.barNumber <= end,
-      );
-
-      return segmentBars.map((bar, barIndex) => {
-        const isEdge = barIndex === 0 || barIndex === segmentBars.length - 1;
-
+      .map((bar) => {
+        const marker = markersByBarNumber.get(bar.barNumber);
+        const longEntryCount =
+          marker?.tagKeys.filter((tagKey) => tagKey === "long_entry").length ??
+          0;
+        const shortEntryCount =
+          marker?.tagKeys.filter((tagKey) => tagKey === "short_entry").length ??
+          0;
         return {
           bar,
-          segmentIndex,
-          isEdge,
-          count: segment.count,
+          count: marker?.count ?? 0,
+          longEntryCount,
+          shortEntryCount,
         };
-      });
-    });
-  }, [bars, segmentTagMarkers]);
+      })
+      .filter((marker) => marker.count > 0);
+  }, [bars, barTagMarkers]);
 
   const numberedBars = useMemo(() => {
     return bars.filter((bar) => bar.barNumber % 3 === 0);
   }, [bars]);
+
+  const annotationLines = useMemo(() => {
+    return segmentTagMarkers.flatMap((segment, segmentIndex) => {
+      const start = Math.min(segment.startBarNumber, segment.endBarNumber);
+      const end = Math.max(segment.startBarNumber, segment.endBarNumber);
+      const rangeBars = bars.filter(
+        (bar) => bar.barNumber >= start && bar.barNumber <= end,
+      );
+      const startBar = bars.find((bar) => bar.barNumber === start);
+      const endBar = bars.find((bar) => bar.barNumber === end);
+
+      if (!startBar || !endBar) {
+        return [];
+      }
+
+      return segment.tagKeys.flatMap((tagKey, tagIndex) => {
+        if (tagKey === "wedge_up") {
+          return {
+            id: `wedge-up-${segmentIndex}-${tagIndex}`,
+            startBar,
+            endBar,
+            startValue: startBar.high,
+            endValue: endBar.high,
+            color: "#a78bfa",
+          };
+        }
+
+        if (tagKey === "wedge_down") {
+          return {
+            id: `wedge-down-${segmentIndex}-${tagIndex}`,
+            startBar,
+            endBar,
+            startValue: startBar.low,
+            endValue: endBar.low,
+            color: "#a78bfa",
+          };
+        }
+
+        if (tagKey === "double_top") {
+          const lowerHigh = Math.min(startBar.high, endBar.high);
+
+          return {
+            id: `double-top-${segmentIndex}-${tagIndex}`,
+            startBar,
+            endBar,
+            startValue: lowerHigh,
+            endValue: lowerHigh,
+            color: "#ef4444",
+          };
+        }
+
+        if (tagKey === "double_bottom") {
+          const higherLow = Math.max(startBar.low, endBar.low);
+
+          return {
+            id: `double-bottom-${segmentIndex}-${tagIndex}`,
+            startBar,
+            endBar,
+            startValue: higherLow,
+            endValue: higherLow,
+            color: "#22c55e",
+          };
+        }
+
+        if (tagKey === "expanding_triangle") {
+          const highestBar = rangeBars.reduce(
+            (highest, bar) => (bar.high > highest.high ? bar : highest),
+            startBar,
+          );
+          const lowestBar = rangeBars.reduce(
+            (lowest, bar) => (bar.low < lowest.low ? bar : lowest),
+            startBar,
+          );
+
+          return [
+            {
+              id: `expanding-triangle-top-${segmentIndex}-${tagIndex}`,
+              startBar,
+              endBar: highestBar,
+              startValue: startBar.high,
+              endValue: highestBar.high,
+              color: "#f97316",
+            },
+            {
+              id: `expanding-triangle-bottom-${segmentIndex}-${tagIndex}`,
+              startBar,
+              endBar: lowestBar,
+              startValue: startBar.low,
+              endValue: lowestBar.low,
+              color: "#f97316",
+            },
+          ];
+        }
+
+        return [];
+      });
+    });
+  }, [bars, segmentTagMarkers]);
+
+  const tradingRangeSegments = useMemo(() => {
+    return segmentTagMarkers.flatMap((segment, segmentIndex) => {
+      if (!segment.tagKeys.includes("trading_range")) {
+        return [];
+      }
+
+      const start = Math.min(segment.startBarNumber, segment.endBarNumber);
+      const end = Math.max(segment.startBarNumber, segment.endBarNumber);
+      const rangeBars = bars.filter(
+        (bar) => bar.barNumber >= start && bar.barNumber <= end,
+      );
+      const startBar = rangeBars[0];
+      const endBar = rangeBars[rangeBars.length - 1];
+
+      if (!startBar || !endBar) {
+        return [];
+      }
+
+      return {
+        id: `trading-range-${segmentIndex}`,
+        startBar,
+        endBar,
+        high: Math.max(...rangeBars.map((bar) => bar.high)),
+        low: Math.min(...rangeBars.map((bar) => bar.low)),
+      };
+    });
+  }, [bars, segmentTagMarkers]);
+
+  const updateTradingRangeOverlays = useCallback(() => {
+    const chart = chartRef.current;
+    const series = candleSeriesRef.current;
+
+    if (!chart || !series || !showSavedMarkers) {
+      setTradingRangeOverlays([]);
+      return;
+    }
+
+    const halfBarSpacing = chart.timeScale().options().barSpacing / 2;
+    const paneWidth = chart.paneSize().width;
+    const nextOverlays = tradingRangeSegments.flatMap((range) => {
+      const startX = chart.timeScale().timeToCoordinate(
+        range.startBar.time as UTCTimestamp,
+      );
+      const endX = chart.timeScale().timeToCoordinate(
+        range.endBar.time as UTCTimestamp,
+      );
+      const topY = series.priceToCoordinate(range.high);
+      const bottomY = series.priceToCoordinate(range.low);
+
+      if (
+        startX === null ||
+        endX === null ||
+        topY === null ||
+        bottomY === null
+      ) {
+        return [];
+      }
+
+      const left = Math.max(Math.min(startX, endX) - halfBarSpacing, 0);
+      const right = Math.min(Math.max(startX, endX) + halfBarSpacing, paneWidth);
+      const top = Math.min(topY, bottomY);
+      const bottom = Math.max(topY, bottomY);
+
+      if (right <= 0 || left >= paneWidth || right <= left) {
+        return [];
+      }
+
+      return {
+        id: range.id,
+        left,
+        top,
+        width: Math.max(right - left, 1),
+        height: Math.max(bottom - top, 1),
+      };
+    });
+
+    setTradingRangeOverlays(nextOverlays);
+  }, [showSavedMarkers, tradingRangeSegments]);
+
+  const scheduleTradingRangeOverlayUpdate = useCallback(() => {
+    requestAnimationFrame(() => {
+      updateTradingRangeOverlays();
+      requestAnimationFrame(updateTradingRangeOverlays);
+    });
+  }, [updateTradingRangeOverlays]);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
     const chart = createChart(containerRef.current, {
       layout: {
-        background: { color: isDarkTheme ? "#0a0a0a" : "#ffffff" },
-        textColor: isDarkTheme ? "#d4d4d8" : "#3f3f46",
+        background: { color: "#ffffff" },
+        textColor: "#3f3f46",
       },
       grid: {
-        vertLines: { color: isDarkTheme ? "#1f1f23" : "#e4e4e7" },
-        horzLines: { color: isDarkTheme ? "#1f1f23" : "#e4e4e7" },
+        vertLines: { color: "#e4e4e7" },
+        horzLines: { color: "#e4e4e7" },
       },
       timeScale: {
         timeVisible: true,
         secondsVisible: false,
-        borderColor: isDarkTheme ? "#27272a" : "#d4d4d8",
+        borderColor: "#d4d4d8",
       },
-      rightPriceScale: { borderColor: isDarkTheme ? "#27272a" : "#d4d4d8" },
+      rightPriceScale: { borderColor: "#d4d4d8" },
       crosshair: {
-        vertLine: { color: isDarkTheme ? "#71717a" : "#a1a1aa" },
-        horzLine: { color: isDarkTheme ? "#71717a" : "#a1a1aa" },
+        vertLine: { color: "#a1a1aa" },
+        horzLine: { color: "#a1a1aa" },
       },
       autoSize: true,
     });
@@ -212,6 +376,7 @@ export function Chart({
       wickDownColor: "#ef4444",
       borderVisible: false,
     });
+    candleSeriesRef.current = series;
 
     series.setData(
       bars.map((bar) => ({
@@ -226,6 +391,7 @@ export function Chart({
       autoScale: true,
       zOrder: "top",
     });
+    setChartReadyToken((token) => token + 1);
 
     function handleCrosshairMove(param: MouseEventParams) {
       if (typeof param.time === "number") {
@@ -255,10 +421,38 @@ export function Chart({
       chart.unsubscribeClick(handleClick);
       selectedMarkerRef.current?.detach();
       selectedMarkerRef.current = null;
+      candleSeriesRef.current = null;
+      annotationLineSeriesRef.current = [];
+      setTradingRangeOverlays([]);
       chart.remove();
       chartRef.current = null;
     };
-  }, [bars, barsByTime, isDarkTheme, onSelectBar]);
+  }, [bars, barsByTime, onSelectBar]);
+
+  useEffect(() => {
+    const chart = chartRef.current;
+    const container = containerRef.current;
+    if (!chart || !container) return;
+
+    scheduleTradingRangeOverlayUpdate();
+
+    function handleVisibleRangeChange() {
+      scheduleTradingRangeOverlayUpdate();
+    }
+
+    const resizeObserver = new ResizeObserver(scheduleTradingRangeOverlayUpdate);
+    resizeObserver.observe(container);
+    chart
+      .timeScale()
+      .subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
+
+    return () => {
+      resizeObserver.disconnect();
+      chart
+        .timeScale()
+        .unsubscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
+    };
+  }, [chartReadyToken, scheduleTradingRangeOverlayUpdate]);
 
   useEffect(() => {
     const markerApi = selectedMarkerRef.current;
@@ -267,52 +461,35 @@ export function Chart({
     const markers: SeriesMarker<Time>[] = [];
 
     if (showSavedMarkers) {
-      const barMarkers: SeriesMarker<Time>[] = labeledBars.map(({ bar, count }) => ({
-        id: `bar-tags-${bar.id}`,
-        time: bar.time as UTCTimestamp,
-        position: "aboveBar",
-        shape: "circle",
-        color: "#22c55e",
-        text: count > 1 ? String(count) : undefined,
-        size: 0.55,
-      }));
+      const barMarkers: SeriesMarker<Time>[] = labeledBars.flatMap(
+        ({ bar, longEntryCount, shortEntryCount }) => {
+          const markersForBar: SeriesMarker<Time>[] = [];
 
-      const savedSegmentMarkers: SeriesMarker<Time>[] = savedSegmentBars.map(
-        ({ bar, segmentIndex, isEdge, count }) => ({
-          id: `segment-tags-${segmentIndex}-${bar.id}`,
-          time: bar.time as UTCTimestamp,
-          position: "belowBar",
-          shape: "square",
-          color: "#a78bfa",
-          text: isEdge && count > 1 ? String(count) : undefined,
-          size: isEdge ? 0.62 : 0.32,
-        }),
+          if (longEntryCount > 0) {
+            markersForBar.push({
+              id: `long-entry-bar-${bar.id}`,
+              time: bar.time as UTCTimestamp,
+              position: "belowBar",
+              shape: "arrowUp",
+              color: "#22c55e",
+              size: 1,
+            });
+          }
+
+          if (shortEntryCount > 0) {
+            markersForBar.push({
+              id: `short-entry-bar-${bar.id}`,
+              time: bar.time as UTCTimestamp,
+              position: "aboveBar",
+              shape: "arrowDown",
+              color: "#ef4444",
+              size: 1,
+            });
+          }
+
+          return markersForBar;
+        },
       );
-
-      const contextMarkers: SeriesMarker<Time>[] = contextBars.map(
-        ({ bar, count }) => ({
-          id: `context-tags-${bar.id}`,
-          time: bar.time as UTCTimestamp,
-          position: "belowBar",
-          shape: "arrowUp",
-          color: "#f59e0b",
-          text: count > 1 ? String(count) : undefined,
-          size: 0.72,
-        }),
-      );
-
-      const outcomeMarkers: SeriesMarker<Time>[] = outcomeBars.map(
-        ({ bar, count }) => ({
-          id: `outcome-tags-${bar.id}`,
-          time: bar.time as UTCTimestamp,
-          position: "aboveBar",
-          shape: "arrowDown",
-          color: "#ec4899",
-          text: count > 1 ? String(count) : undefined,
-          size: 0.72,
-        }),
-      );
-
       const barNumberMarkers: SeriesMarker<Time>[] = numberedBars.map((bar) => ({
         id: `bar-number-${bar.id}`,
         time: bar.time as UTCTimestamp,
@@ -323,13 +500,7 @@ export function Chart({
         size: 0,
       }));
 
-      markers.push(
-        ...barMarkers,
-        ...savedSegmentMarkers,
-        ...contextMarkers,
-        ...outcomeMarkers,
-        ...barNumberMarkers,
-      );
+      markers.push(...barMarkers, ...barNumberMarkers);
     }
 
     const rangeMarkers: SeriesMarker<Time>[] = selectedRangeBars.map((bar, index) => {
@@ -368,15 +539,54 @@ export function Chart({
 
     markerApi.setMarkers(markers);
   }, [
-    contextBars,
+    chartReadyToken,
     labeledBars,
     numberedBars,
-    outcomeBars,
-    savedSegmentBars,
     selectedBar,
     selectedRangeBars,
     showSavedMarkers,
   ]);
+
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+
+    removeWedgeSeries(chart, annotationLineSeriesRef.current);
+    annotationLineSeriesRef.current = [];
+
+    if (!showSavedMarkers) {
+      return;
+    }
+
+    for (const line of annotationLines) {
+      const series = chart.addSeries(LineSeries, {
+        color: line.color,
+        lineStyle: LineStyle.Dotted,
+        lineWidth: 2,
+        lastValueVisible: false,
+        priceLineVisible: false,
+        crosshairMarkerVisible: false,
+      });
+      const data: LineData[] = [
+        {
+          time: line.startBar.time as UTCTimestamp,
+          value: line.startValue,
+        },
+        {
+          time: line.endBar.time as UTCTimestamp,
+          value: line.endValue,
+        },
+      ];
+
+      series.setData(data);
+      annotationLineSeriesRef.current.push(series);
+    }
+
+    return () => {
+      removeWedgeSeries(chartRef.current, annotationLineSeriesRef.current);
+      annotationLineSeriesRef.current = [];
+    };
+  }, [annotationLines, chartReadyToken, showSavedMarkers]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -417,7 +627,23 @@ export function Chart({
           Marks
         </button>
       </div>
-      <div ref={containerRef} className="min-h-0 flex-1" />
+      <div className="relative min-h-0 flex-1 overflow-hidden">
+        <div ref={containerRef} className="absolute inset-0" />
+        <div className="pointer-events-none absolute inset-0 z-10">
+          {tradingRangeOverlays.map((overlay) => (
+            <div
+              key={overlay.id}
+              className="absolute bg-blue-700/[0.08] dark:bg-blue-400/[0.10]"
+              style={{
+                left: overlay.left,
+                top: overlay.top,
+                width: overlay.width,
+                height: overlay.height,
+              }}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

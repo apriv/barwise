@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { connection } from "next/server";
 
+import { GroupField } from "@/components/tag-form/GroupField";
 import { saveDictionaryItem } from "@/lib/actions/dictionary";
 import { ensureDatabase } from "@/lib/db/ensure";
 import type { LabelCategory, LabelSource } from "@/lib/repo/dictionary";
+import { listDictionaryGroups } from "@/lib/repo/dictionary";
 
 const categories: LabelCategory[] = ["bar", "segment", "context", "outcome"];
 const sources: LabelSource[] = [
@@ -36,6 +38,7 @@ export default async function NewTagPage({
     selectedCategory && categories.includes(selectedCategory)
       ? selectedCategory
       : "bar";
+  const groups = listDictionaryGroups(category);
 
   return (
     <main className="flex flex-1 justify-center px-6 py-8">
@@ -67,6 +70,8 @@ export default async function NewTagPage({
               required
               name="key"
               placeholder="strong_bull_close"
+              pattern="[a-z0-9_]+"
+              title="Use lowercase letters, numbers, and underscores."
               className="w-full rounded border border-zinc-300 bg-white px-3 py-2 font-mono dark:border-zinc-800 dark:bg-zinc-950"
             />
           </label>
@@ -96,17 +101,10 @@ export default async function NewTagPage({
               ))}
             </select>
           </label>
-          <label className="space-y-1 text-sm">
-            <span className="text-xs font-medium uppercase text-zinc-500">
-              Group
-            </span>
-            <input
-              required
-              name="groupName"
-              defaultValue={category === "outcome" ? "outcome_result" : ""}
-              className="w-full rounded border border-zinc-300 bg-white px-3 py-2 font-mono dark:border-zinc-800 dark:bg-zinc-950"
-            />
-          </label>
+          <GroupField
+            defaultValue={category === "outcome" ? "outcome_result" : ""}
+            groups={groups}
+          />
           <label className="space-y-1 text-sm md:col-span-2">
             <span className="text-xs font-medium uppercase text-zinc-500">
               Description

@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { ThemeToggle } from "@/components/ui/ThemeToggle";
-
 const ITEMS = [
   { href: "/sessions", label: "Sessions" },
   { href: "/tags", label: "Tags" },
@@ -35,9 +33,6 @@ export function TopNav() {
           </Link>
         );
       })}
-      <div className="ml-auto">
-        <ThemeToggle />
-      </div>
     </nav>
   );
 }

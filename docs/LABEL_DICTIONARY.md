@@ -68,7 +68,7 @@ V2 起，Tag→Field 映射正式落到 `label_dictionary.field_mapping_json`，
 
 | field | values |
 |---|---|
-| `direction` | `bull` / `bear` / `neutral` |
+| `direction` | `bull` / `bear` / `neutral` / `up` / `down` |
 | `body` | `strong` / `medium` / `weak` / `doji` |
 | `close` | `near_high` / `upper_half` / `middle` / `lower_half` / `near_low` |
 | `tail` | `small_tails` / `long_upper_tail` / `long_lower_tail` / `long_both_tails` |
@@ -95,7 +95,7 @@ Visible tags（人工选的）：
 
 | field | values |
 |---|---|
-| `role` | `signal` / `entry` / `follow_through` / `pullback` / `breakout_attempt` / `reversal_attempt` / `test` |
+| `role` | `signal` / `climax` / `entry` / `follow_through` / `pullback` / `breakout_attempt` / `reversal_attempt` / `test` |
 | `relation` | `inside` / `outside` / `none` |
 
 Visible tags：
@@ -103,7 +103,9 @@ Visible tags：
 | tag | 对应底层 |
 |---|---|
 | `signal_bar` | role=signal |
-| `entry_bar` | role=entry |
+| `climax` | role=climax |
+| `long_entry` | role=entry, direction=long |
+| `short_entry` | role=entry, direction=short |
 | `follow_through_bar` | role=follow_through |
 | `pullback_bar` | role=pullback |
 | `breakout_attempt_bar` | role=breakout_attempt |
@@ -124,7 +126,7 @@ Visible tags：
 
 | field | values |
 |---|---|
-| `structure` | `leg` / `channel` / `trading_range` / `flag` / `double_top` / `double_bottom` / `wedge` / `spike` |
+| `structure` | `leg` / `channel` / `trading_range` / `flag` / `double_top` / `double_bottom` / `wedge` / `expanding_triangle` / `spike` |
 | `direction` | `bull` / `bear` / `neutral` |
 
 Visible tags：
@@ -139,7 +141,9 @@ Visible tags：
 | `flag` | structure=flag（direction 不固定，初始 neutral） |
 | `double_top` | structure=double_top, direction=bear |
 | `double_bottom` | structure=double_bottom, direction=bull |
-| `wedge` | structure=wedge（direction 不固定） |
+| `wedge_up` | structure=wedge, direction=up |
+| `wedge_down` | structure=wedge, direction=down |
+| `expanding_triangle` | structure=expanding_triangle |
 | `spike` | structure=spike（direction 跟随 spike 方向） |
 
 **注意：** `pullback` / `breakout_attempt` / `reversal_attempt` 不在 Segment（这些是 event / bar pattern，不是结构形态）。如果想标"这段是一个 pullback"，请用 Bar Pattern 的 `pullback_bar` 给该段的关键 bar 打 tag，或在 Context.event 里打 `bull_pullback`。
