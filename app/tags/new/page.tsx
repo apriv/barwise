@@ -54,7 +54,7 @@ export default async function NewTagPage({
             New tag
           </h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            Create a dictionary tag with metadata and field mapping.
+            Create a dictionary tag with the fields used in the marking panel.
           </p>
         </div>
 
@@ -62,6 +62,7 @@ export default async function NewTagPage({
           action={saveDictionaryItem}
           className="grid gap-4 rounded border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950/60 md:grid-cols-2"
         >
+          <input type="hidden" name="fieldMappingJson" value="{}" />
           <label className="space-y-1 text-sm">
             <span className="text-xs font-medium uppercase text-zinc-500">
               Key
@@ -123,17 +124,6 @@ export default async function NewTagPage({
               name="example"
               rows={2}
               className="w-full rounded border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950"
-            />
-          </label>
-          <label className="space-y-1 text-sm md:col-span-2">
-            <span className="text-xs font-medium uppercase text-zinc-500">
-              Field mapping JSON
-            </span>
-            <textarea
-              name="fieldMappingJson"
-              rows={7}
-              defaultValue={"{}"}
-              className="w-full rounded border border-zinc-300 bg-white px-3 py-2 font-mono text-xs dark:border-zinc-800 dark:bg-zinc-950"
             />
           </label>
           <label className="space-y-1 text-sm">

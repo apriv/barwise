@@ -333,8 +333,8 @@ source
 - [ ] outcome marker
 - [x] 不要每次改变tag顺序
 - 快捷键 1long entry 2short entry, 
-- 修改和新增tag保存后，跳转到tag列表
-- 新增tag的时候有json，不明白什么意思
+- [x] 修改和新增tag保存后，跳转到tag列表
+- [x] 新增tag的时候隐藏 field mapping JSON，默认使用空映射
 
 
 ### 验收

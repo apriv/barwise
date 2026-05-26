@@ -94,7 +94,7 @@ export async function saveDictionaryItem(formData: FormData) {
   revalidatePath("/tags");
   revalidatePath("/tags/dashboard");
   revalidatePath(`/tags/${key}`);
-  redirect(`/tags/${key}?category=${category}`);
+  redirect(`/tags?category=${category}&status=all`);
 }
 
 export async function setDictionaryItemActiveFromForm(formData: FormData) {
