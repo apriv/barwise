@@ -1,352 +1,555 @@
 import { getDb } from "@/lib/db/client";
 
+type LabelCategory = "bar" | "segment" | "context" | "outcome";
+type LabelSource =
+  | "manual"
+  | "auto_numeric"
+  | "nlp"
+  | "imported_albrooks"
+  | "model_suggested";
+
+type FieldMapping = Record<string, string>;
+
 type DictionarySeed = {
-  category: "bar" | "segment" | "context";
+  category: LabelCategory;
   group_name: string;
   key: string;
   label: string;
-  description?: string;
+  description: string;
+  example?: string;
+  fieldMapping?: FieldMapping;
+  source?: LabelSource;
 };
 
-const dictionarySeeds: DictionarySeed[] = [
+const barTags: DictionarySeed[] = [
   {
     category: "bar",
-    group_name: "bar_quality",
+    group_name: "bar_shape",
     key: "strong_bull_bar",
-    label: "强阳线",
-    description: "大实体收高、上影线短",
+    label: "Strong Bull Bar",
+    description: "Strong bullish candle with a large body.",
+    fieldMapping: { direction: "bull", body: "strong" },
   },
   {
     category: "bar",
-    group_name: "bar_quality",
+    group_name: "bar_shape",
     key: "strong_bear_bar",
-    label: "强阴线",
-    description: "大实体收低、下影线短",
+    label: "Strong Bear Bar",
+    description: "Strong bearish candle with a large body.",
+    fieldMapping: { direction: "bear", body: "strong" },
   },
   {
     category: "bar",
-    group_name: "bar_quality",
-    key: "weak_signal_bar",
-    label: "弱信号线",
-    description: "实体小、方向不明",
+    group_name: "bar_shape",
+    key: "weak_bull_bar",
+    label: "Weak Bull Bar",
+    description: "Bullish candle with weak body or poor close.",
+    fieldMapping: { direction: "bull", body: "weak" },
   },
   {
     category: "bar",
-    group_name: "bar_quality",
-    key: "doji_or_overlap",
-    label: "十字/重叠线",
-    description: "开收接近，与前一根高度重叠",
+    group_name: "bar_shape",
+    key: "weak_bear_bar",
+    label: "Weak Bear Bar",
+    description: "Bearish candle with weak body or poor close.",
+    fieldMapping: { direction: "bear", body: "weak" },
   },
   {
     category: "bar",
-    group_name: "bar_quality",
-    key: "climactic_bar",
-    label: "高潮线",
-    description: "远超近期波幅，常见于趋势末端",
+    group_name: "bar_shape",
+    key: "doji",
+    label: "Doji",
+    description: "Candle with nearly equal open and close.",
+    fieldMapping: { body: "doji" },
   },
   {
     category: "bar",
-    group_name: "bar_quality",
-    key: "inside_bar",
-    label: "内包线",
-    description: "完全在前一根高低之间",
+    group_name: "bar_shape",
+    key: "close_near_high",
+    label: "Close Near High",
+    description: "Close is near the high of the bar.",
+    fieldMapping: { close: "near_high" },
   },
   {
     category: "bar",
-    group_name: "bar_quality",
-    key: "outside_bar",
-    label: "外包线",
-    description: "完全包住前一根",
+    group_name: "bar_shape",
+    key: "close_near_low",
+    label: "Close Near Low",
+    description: "Close is near the low of the bar.",
+    fieldMapping: { close: "near_low" },
   },
   {
     category: "bar",
-    group_name: "bar_quality",
-    key: "reversal_bar",
-    label: "反转线",
-    description: "长影线尾部反向收盘",
+    group_name: "bar_shape",
+    key: "long_upper_tail",
+    label: "Long Upper Tail",
+    description: "Bar has a long upper tail.",
+    fieldMapping: { tail: "long_upper_tail" },
   },
   {
     category: "bar",
-    group_name: "bar_role",
+    group_name: "bar_shape",
+    key: "long_lower_tail",
+    label: "Long Lower Tail",
+    description: "Bar has a long lower tail.",
+    fieldMapping: { tail: "long_lower_tail" },
+  },
+  {
+    category: "bar",
+    group_name: "bar_pattern",
     key: "signal_bar",
-    label: "信号线",
+    label: "Signal Bar",
+    description: "Bar that signals a potential setup.",
+    fieldMapping: { role: "signal" },
   },
   {
     category: "bar",
-    group_name: "bar_role",
+    group_name: "bar_pattern",
     key: "climax",
-    label: "高潮线",
-    description: "买卖压力高潮的单根 K 线",
+    label: "Climax",
+    description: "Single bar with climactic buying or selling pressure.",
+    fieldMapping: { role: "climax" },
   },
   {
     category: "bar",
-    group_name: "bar_role",
+    group_name: "bar_pattern",
     key: "long_entry",
-    label: "做多进场线",
+    label: "Long Entry",
+    description: "Bar used as a long entry point.",
+    fieldMapping: { role: "entry", direction: "long" },
   },
   {
     category: "bar",
-    group_name: "bar_role",
+    group_name: "bar_pattern",
     key: "short_entry",
-    label: "做空进场线",
+    label: "Short Entry",
+    description: "Bar used as a short entry point.",
+    fieldMapping: { role: "entry", direction: "short" },
   },
   {
     category: "bar",
-    group_name: "bar_role",
+    group_name: "bar_pattern",
     key: "follow_through_bar",
-    label: "跟进线",
+    label: "Follow Through Bar",
+    description: "Bar that follows through after a prior move.",
+    fieldMapping: { role: "follow_through" },
   },
   {
     category: "bar",
-    group_name: "bar_role",
-    key: "failure_bar",
-    label: "失败线",
+    group_name: "bar_pattern",
+    key: "pullback_bar",
+    label: "Pullback Bar",
+    description: "Bar pulling back against the current move.",
+    fieldMapping: { role: "pullback" },
+  },
+  {
+    category: "bar",
+    group_name: "bar_pattern",
+    key: "breakout_attempt_bar",
+    label: "Breakout Attempt Bar",
+    description: "Bar attempting to break beyond a prior level.",
+    fieldMapping: { role: "breakout_attempt" },
+  },
+  {
+    category: "bar",
+    group_name: "bar_pattern",
+    key: "reversal_attempt_bar",
+    label: "Reversal Attempt Bar",
+    description: "Bar attempting to reverse the current move.",
+    fieldMapping: { role: "reversal_attempt" },
+  },
+  {
+    category: "bar",
+    group_name: "bar_pattern",
+    key: "test_bar",
+    label: "Test Bar",
+    description: "Bar testing a prior level.",
+    fieldMapping: { role: "test" },
+  },
+  {
+    category: "bar",
+    group_name: "bar_pattern",
+    key: "inside_bar",
+    label: "Inside Bar",
+    description: "Bar fully contained within the prior bar range.",
+    fieldMapping: { relation: "inside" },
+  },
+  {
+    category: "bar",
+    group_name: "bar_pattern",
+    key: "outside_bar",
+    label: "Outside Bar",
+    description: "Bar exceeding both sides of the prior bar range.",
+    fieldMapping: { relation: "outside" },
+  },
+];
+
+const segmentTags: DictionarySeed[] = [
+  {
+    category: "segment",
+    group_name: "segment",
+    key: "bull_leg",
+    label: "Bull Leg",
+    description: "Directional upward leg.",
+    fieldMapping: { structure: "leg", direction: "bull" },
   },
   {
     category: "segment",
-    group_name: "segment_kind",
-    key: "leg",
-    label: "腿",
-    description: "一段单向运动",
+    group_name: "segment",
+    key: "bear_leg",
+    label: "Bear Leg",
+    description: "Directional downward leg.",
+    fieldMapping: { structure: "leg", direction: "bear" },
   },
   {
     category: "segment",
-    group_name: "segment_kind",
-    key: "pullback",
-    label: "回调",
-    description: "趋势中的反向小段",
+    group_name: "segment",
+    key: "bull_channel",
+    label: "Bull Channel",
+    description: "Upward movement within a channel.",
+    fieldMapping: { structure: "channel", direction: "bull" },
   },
   {
     category: "segment",
-    group_name: "segment_kind",
-    key: "breakout_attempt",
-    label: "突破尝试",
-    description: "试图破近期 swing high/low",
+    group_name: "segment",
+    key: "bear_channel",
+    label: "Bear Channel",
+    description: "Downward movement within a channel.",
+    fieldMapping: { structure: "channel", direction: "bear" },
   },
   {
     category: "segment",
-    group_name: "segment_kind",
-    key: "wedge_up",
-    label: "上升楔形",
-    description: "连接首尾高点的楔形",
-  },
-  {
-    category: "segment",
-    group_name: "segment_kind",
-    key: "wedge_down",
-    label: "下降楔形",
-    description: "连接首尾低点的楔形",
-  },
-  {
-    category: "segment",
-    group_name: "segment_kind",
-    key: "expanding_triangle",
-    label: "扩张三角形",
-    description: "高低点逐渐扩张的结构",
-  },
-  {
-    category: "segment",
-    group_name: "segment_kind",
-    key: "failed_breakout",
-    label: "假突破",
-    description: "破位后又回到区间",
-  },
-  {
-    category: "segment",
-    group_name: "segment_kind",
-    key: "test_of_high",
-    label: "测试高点",
-    description: "回到近期高点附近",
-  },
-  {
-    category: "segment",
-    group_name: "segment_kind",
-    key: "test_of_low",
-    label: "测试低点",
-    description: "回到近期低点附近",
-  },
-  {
-    category: "segment",
-    group_name: "segment_kind",
-    key: "reversal_attempt",
-    label: "反转尝试",
-    description: "试图反转主方向",
-  },
-  {
-    category: "segment",
-    group_name: "segment_kind",
-    key: "continuation_attempt",
-    label: "延续尝试",
-    description: "趋势继续的努力",
-  },
-  {
-    category: "segment",
-    group_name: "segment_kind",
-    key: "consolidation",
-    label: "盘整",
-    description: "横向区间",
-  },
-  {
-    category: "segment",
-    group_name: "segment_kind",
-    key: "weak_follow_through",
-    label: "弱跟进",
-    description: "突破后跟进无力",
-  },
-  {
-    category: "context",
-    group_name: "market_context",
-    key: "trend",
-    label: "趋势",
-  },
-  {
-    category: "context",
-    group_name: "market_context",
-    key: "channel",
-    label: "通道",
-  },
-  {
-    category: "context",
-    group_name: "market_context",
+    group_name: "segment",
     key: "trading_range",
-    label: "区间",
+    label: "Trading Range",
+    description: "Sideways price action within a range.",
+    fieldMapping: { structure: "trading_range", direction: "neutral" },
+  },
+  {
+    category: "segment",
+    group_name: "segment",
+    key: "flag",
+    label: "Flag",
+    description: "Consolidation after a strong move.",
+    fieldMapping: { structure: "flag", direction: "neutral" },
+  },
+  {
+    category: "segment",
+    group_name: "segment",
+    key: "double_top",
+    label: "Double Top",
+    description: "Two pushes up to a similar price area.",
+    fieldMapping: { structure: "double_top", direction: "bear" },
+  },
+  {
+    category: "segment",
+    group_name: "segment",
+    key: "double_bottom",
+    label: "Double Bottom",
+    description: "Two pushes down to a similar price area.",
+    fieldMapping: { structure: "double_bottom", direction: "bull" },
+  },
+  {
+    category: "segment",
+    group_name: "segment",
+    key: "wedge_up",
+    label: "Wedge Up",
+    description: "Wedge structure drawn across swing highs.",
+    fieldMapping: { structure: "wedge", direction: "up" },
+  },
+  {
+    category: "segment",
+    group_name: "segment",
+    key: "wedge_down",
+    label: "Wedge Down",
+    description: "Wedge structure drawn across swing lows.",
+    fieldMapping: { structure: "wedge", direction: "down" },
+  },
+  {
+    category: "segment",
+    group_name: "segment",
+    key: "expanding_triangle",
+    label: "Expanding Triangle",
+    description: "Expanding structure with widening highs and lows.",
+    fieldMapping: { structure: "expanding_triangle" },
+  },
+  {
+    category: "segment",
+    group_name: "segment",
+    key: "spike",
+    label: "Spike",
+    description: "Sharp directional move.",
+    fieldMapping: { structure: "spike" },
+  },
+];
+
+const contextTags: DictionarySeed[] = [
+  {
+    category: "context",
+    group_name: "context_market",
+    key: "bull_trend_context",
+    label: "Bull Trend",
+    description: "Market is in a bull trend.",
+    fieldMapping: { market: "bull_trend" },
   },
   {
     category: "context",
-    group_name: "market_context",
-    key: "transition",
-    label: "转换中",
+    group_name: "context_market",
+    key: "bear_trend_context",
+    label: "Bear Trend",
+    description: "Market is in a bear trend.",
+    fieldMapping: { market: "bear_trend" },
   },
   {
     category: "context",
-    group_name: "trend_direction",
-    key: "bull",
-    label: "多头",
+    group_name: "context_market",
+    key: "bull_channel_context",
+    label: "Bull Channel",
+    description: "Market is in a bull channel.",
+    fieldMapping: { market: "bull_channel" },
   },
   {
     category: "context",
-    group_name: "trend_direction",
-    key: "bear",
-    label: "空头",
+    group_name: "context_market",
+    key: "bear_channel_context",
+    label: "Bear Channel",
+    description: "Market is in a bear channel.",
+    fieldMapping: { market: "bear_channel" },
   },
   {
     category: "context",
-    group_name: "trend_direction",
-    key: "neutral",
-    label: "中性",
+    group_name: "context_market",
+    key: "trading_range_context",
+    label: "Trading Range",
+    description: "Market is in a trading range.",
+    fieldMapping: { market: "trading_range" },
   },
   {
     category: "context",
-    group_name: "current_location",
-    key: "near_high_of_day",
-    label: "接近日内高点",
+    group_name: "context_market",
+    key: "transition_context",
+    label: "Transition",
+    description: "Market is transitioning between structures.",
+    fieldMapping: { market: "transition" },
   },
   {
     category: "context",
-    group_name: "current_location",
-    key: "near_low_of_day",
-    label: "接近日内低点",
+    group_name: "context_event",
+    key: "bull_breakout_attempt",
+    label: "Bull Breakout Attempt",
+    description: "Possible upside breakout attempt.",
+    fieldMapping: { event: "breakout_attempt", direction: "bull" },
   },
   {
     category: "context",
-    group_name: "current_location",
-    key: "middle_of_range",
-    label: "区间中间",
+    group_name: "context_event",
+    key: "bear_breakout_attempt",
+    label: "Bear Breakout Attempt",
+    description: "Possible downside breakout attempt.",
+    fieldMapping: { event: "breakout_attempt", direction: "bear" },
   },
   {
     category: "context",
-    group_name: "current_location",
-    key: "near_ema",
-    label: "接近 EMA",
+    group_name: "context_event",
+    key: "bull_pullback",
+    label: "Bull Pullback",
+    description: "Pullback within a bull move or bull trend.",
+    fieldMapping: { event: "pullback", direction: "bull" },
   },
   {
     category: "context",
-    group_name: "current_location",
-    key: "near_prior_swing_high",
-    label: "接近前 swing 高",
+    group_name: "context_event",
+    key: "bear_pullback",
+    label: "Bear Pullback",
+    description: "Pullback within a bear move or bear trend.",
+    fieldMapping: { event: "pullback", direction: "bear" },
   },
   {
     category: "context",
-    group_name: "current_location",
-    key: "near_prior_swing_low",
-    label: "接近前 swing 低",
-  },
-  {
-    category: "context",
-    group_name: "current_event",
-    key: "breakout_attempt",
-    label: "突破尝试",
-  },
-  {
-    category: "context",
-    group_name: "current_event",
-    key: "pullback",
-    label: "回调中",
-  },
-  {
-    category: "context",
-    group_name: "current_event",
-    key: "failed_breakout_possible",
-    label: "可能假突破",
-  },
-  {
-    category: "context",
-    group_name: "current_event",
+    group_name: "context_event",
     key: "test_of_high",
-    label: "测试高点",
+    label: "Test of High",
+    description: "Price is testing a prior high.",
+    fieldMapping: { event: "test_of_high" },
   },
   {
     category: "context",
-    group_name: "current_event",
+    group_name: "context_event",
     key: "test_of_low",
-    label: "测试低点",
+    label: "Test of Low",
+    description: "Price is testing a prior low.",
+    fieldMapping: { event: "test_of_low" },
   },
   {
     category: "context",
-    group_name: "current_event",
+    group_name: "context_event",
     key: "reversal_attempt",
-    label: "反转尝试",
+    label: "Reversal Attempt",
+    description: "Market is attempting to reverse.",
+    fieldMapping: { event: "reversal_attempt" },
   },
   {
     category: "context",
-    group_name: "current_event",
-    key: "continuation_attempt",
-    label: "延续尝试",
+    group_name: "context_event",
+    key: "failed_breakout_possible",
+    label: "Failed Breakout Possible",
+    description: "Breakout may fail back into the prior range.",
+    fieldMapping: { event: "failed_breakout_possible" },
   },
   {
     category: "context",
-    group_name: "current_event",
-    key: "no_clear_setup",
-    label: "没有明确形态",
+    group_name: "context_location",
+    key: "near_high_of_day",
+    label: "Near High of Day",
+    description: "Price is near the current high of day.",
+    fieldMapping: { location: "near_high_of_day" },
   },
   {
     category: "context",
-    group_name: "trade_quality",
-    key: "good_context",
-    label: "好上下文",
+    group_name: "context_location",
+    key: "near_low_of_day",
+    label: "Near Low of Day",
+    description: "Price is near the current low of day.",
+    fieldMapping: { location: "near_low_of_day" },
   },
   {
     category: "context",
-    group_name: "trade_quality",
-    key: "acceptable_context",
-    label: "可接受",
+    group_name: "context_location",
+    key: "middle_of_day_range",
+    label: "Middle of Day Range",
+    description: "Price is near the middle of the day's range.",
+    fieldMapping: { location: "middle_of_day_range" },
   },
   {
     category: "context",
-    group_name: "trade_quality",
-    key: "bad_context",
-    label: "不该交易",
+    group_name: "context_location",
+    key: "near_range_high",
+    label: "Near Range High",
+    description: "Price is near the upper edge of a trading range.",
+    fieldMapping: { location: "near_range_high" },
   },
   {
     category: "context",
-    group_name: "trade_quality",
-    key: "wait_for_more_information",
-    label: "再等等",
+    group_name: "context_location",
+    key: "near_range_low",
+    label: "Near Range Low",
+    description: "Price is near the lower edge of a trading range.",
+    fieldMapping: { location: "near_range_low" },
   },
+  {
+    category: "context",
+    group_name: "context_location",
+    key: "near_ema",
+    label: "Near EMA",
+    description: "Price is near the EMA.",
+    fieldMapping: { location: "near_ema" },
+  },
+  {
+    category: "context",
+    group_name: "context_location",
+    key: "above_ema",
+    label: "Above EMA",
+    description: "Price is above the EMA.",
+    fieldMapping: { location: "above_ema" },
+  },
+  {
+    category: "context",
+    group_name: "context_location",
+    key: "below_ema",
+    label: "Below EMA",
+    description: "Price is below the EMA.",
+    fieldMapping: { location: "below_ema" },
+  },
+  {
+    category: "context",
+    group_name: "context_location",
+    key: "near_prior_swing_high",
+    label: "Near Prior Swing High",
+    description: "Price is near a prior swing high.",
+    fieldMapping: { location: "near_prior_swing_high" },
+  },
+  {
+    category: "context",
+    group_name: "context_location",
+    key: "near_prior_swing_low",
+    label: "Near Prior Swing Low",
+    description: "Price is near a prior swing low.",
+    fieldMapping: { location: "near_prior_swing_low" },
+  },
+];
+
+const outcomeTags: DictionarySeed[] = [
+  {
+    category: "outcome",
+    group_name: "outcome_result",
+    key: "succeeded",
+    label: "Succeeded",
+    description: "The expected price action succeeded.",
+    fieldMapping: { result: "succeeded" },
+  },
+  {
+    category: "outcome",
+    group_name: "outcome_result",
+    key: "failed",
+    label: "Failed",
+    description: "The expected price action failed.",
+    fieldMapping: { result: "failed" },
+  },
+  {
+    category: "outcome",
+    group_name: "outcome_result",
+    key: "continued",
+    label: "Continued",
+    description: "The move continued after the labeled structure.",
+    fieldMapping: { result: "continued" },
+  },
+  {
+    category: "outcome",
+    group_name: "outcome_result",
+    key: "reversed",
+    label: "Reversed",
+    description: "The move reversed after the labeled structure.",
+    fieldMapping: { result: "reversed" },
+  },
+  {
+    category: "outcome",
+    group_name: "outcome_result",
+    key: "evolved_into_range",
+    label: "Evolved Into Range",
+    description: "The structure evolved into a trading range.",
+    fieldMapping: { result: "evolved_into_range" },
+  },
+  {
+    category: "outcome",
+    group_name: "outcome_result",
+    key: "evolved_into_channel",
+    label: "Evolved Into Channel",
+    description: "The structure evolved into a channel.",
+    fieldMapping: { result: "evolved_into_channel" },
+  },
+  {
+    category: "outcome",
+    group_name: "outcome_result",
+    key: "unclear",
+    label: "Unclear",
+    description: "The outcome is unclear.",
+    fieldMapping: { result: "unclear" },
+  },
+];
+
+export const dictionarySeeds = [
+  ...barTags,
+  ...segmentTags,
+  ...contextTags,
+  ...outcomeTags,
 ];
 
 function unixNow() {
   return Math.floor(Date.now() / 1000);
+}
+
+function mappingJson(seed: DictionarySeed) {
+  return JSON.stringify(seed.fieldMapping ?? {});
 }
 
 export function seedDictionary() {
@@ -354,16 +557,42 @@ export function seedDictionary() {
   const now = unixNow();
 
   const insert = db.prepare(`
-    INSERT OR IGNORE INTO label_dictionary (
+    INSERT INTO label_dictionary (
       category,
       group_name,
       key,
       label,
       description,
+      example,
+      field_mapping_json,
       sort_order,
       is_active,
-      created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, 1, ?)
+      created_by,
+      source,
+      created_at,
+      updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 'local', ?, ?, ?)
+    ON CONFLICT (category, key) DO UPDATE SET
+      description = CASE
+        WHEN label_dictionary.description IS NULL OR label_dictionary.description = ''
+        THEN excluded.description
+        ELSE label_dictionary.description
+      END,
+      example = CASE
+        WHEN label_dictionary.example IS NULL OR label_dictionary.example = ''
+        THEN excluded.example
+        ELSE label_dictionary.example
+      END,
+      field_mapping_json = CASE
+        WHEN label_dictionary.field_mapping_json IS NULL OR label_dictionary.field_mapping_json = '{}'
+        THEN excluded.field_mapping_json
+        ELSE label_dictionary.field_mapping_json
+      END,
+      sort_order = CASE
+        WHEN label_dictionary.sort_order = 0
+        THEN excluded.sort_order
+        ELSE label_dictionary.sort_order
+      END
   `);
 
   const seed = db.transaction(() => {
@@ -373,8 +602,12 @@ export function seedDictionary() {
         entry.group_name,
         entry.key,
         entry.label,
-        entry.description ?? null,
+        entry.description,
+        entry.example ?? null,
+        mappingJson(entry),
         index + 1,
+        entry.source ?? "manual",
+        now,
         now,
       );
     });
@@ -383,4 +616,4 @@ export function seedDictionary() {
   seed();
 }
 
-export { dictionarySeeds };
+export default seedDictionary;

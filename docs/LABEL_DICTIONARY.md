@@ -18,25 +18,25 @@
 ## 数据三层结构
 
 ```
-Tag  (V1 唯一存储形态：人工自由打 tag、多选)
+Tag  (唯一存储形态：人工自由打 tag、多选)
   ↓ 由"Tag → Field 映射表"派生
-Field (底层正交维度；V1 不直接存储，由 tag derive 出来)
+Field (底层正交维度；不直接存储，由 tag derive 出来)
   ↓
 Note (自由文本，补充无法 enum 化的内容)
 ```
 
 **原则：**
 
-1. **V1 全部用 tag**：人工打 tag 体感快、心智负担低，不需要在意"这是 direction 还是 close"。
-2. **tag 多次稳定出现后，升级成 field**：V3 阶段会把高频稳定 tag 拆到底层 field，与训练数据对齐。
+1. **全部用 tag**：人工打 tag 体感快、心智负担低，不需要在意"这是 direction 还是 close"。
+2. **tag 多次稳定出现后，可升级成 field**：后续可以把高频稳定 tag 拆到底层 field，与训练数据对齐。
 3. **底层 field 已经先想清楚**：见下文每类下"底层 field"小节。它**先存在于映射表里**，将来 NLP / ML 直接对接，避免标注语料丢失结构。
-4. **note 是 V1 的兜底**：所有无法 enum 的内容（"多头试图站稳但量能不足"）进 note。
+4. **note 是兜底**：所有无法 enum 的内容（"多头试图站稳但量能不足"）进 note。
 
 **多选规则：** 每个 tag group（Bar Shape、Bar Pattern、Segment、Context 各子组）都是**多选**。一根 bar 可以同时打 `strong_bull_bar` + `close_near_high` + `follow_through_bar`。
 
-## V2 字典元数据
+## 字典元数据
 
-V2 起，Tag→Field 映射正式落到 `label_dictionary.field_mapping_json`，而不是只存在于文档表格里。字段命名沿用当前代码：
+Tag→Field 映射落到 `label_dictionary.field_mapping_json`，而不是只存在于文档表格里。字段命名沿用当前代码：
 
 | roadmap 名称 | 数据库字段 |
 |---|---|
@@ -200,11 +200,11 @@ Visible tags：
 
 ---
 
-## D. Outcome Labels（V2）
+## D. Outcome Labels
 
 事后回看的结果，例："Bar 42 confirms `failed_bear_breakout` for the segment bar 35–37"。
 
-V2 中 outcome 挂在 selected range 上，并可指定确认 outcome 的 bar。第一版 visible tags：
+Outcome 挂在 selected range 上，并可指定确认 outcome 的 bar。第一版 visible tags：
 
 ```
 succeeded / failed / continued / reversed
@@ -228,22 +228,15 @@ evolved_into_range / evolved_into_channel / unclear
 | 点单根 K 线 | Bar Shape tags + Bar Pattern tags + Context tags |
 | 框选一段 K 线 | Segment tags |
 | 任何 tag 表达不出来的细节 | note |
-| 当天结束 | （V2 才有的 Outcome；V1 用 note） |
+| 当天结束 | Outcome tags |
 
 **多 tag 的 mental model：** "我看到这根 bar，能用哪些词描述它？" 不要纠结"应该只选一个"。一根 strong_bull_bar 同时是 follow_through_bar 同时 close_near_high，那就三个都打。
 
 ---
 
-## 字典演化（V1→V4）
+## 字典管理
 
-| 版本 | 状态 |
-|---|---|
-| V1 | 人工自由打 tag（visible tag），底层 field 通过映射表 derive |
-| V2 | 给 tag 加 taxonomy / group 元数据；加 Outcome；字典编辑 UI |
-| V3 | 把稳定高频 tag 升级为正式 field；NLP 可直接产出 field 值 |
-| V4 | field + tag 双轨；做 NLP / ML / 实时解释 |
-
-**字典管理**：V1 不做 UI。如果要加新 tag，目前是改 seed SQL + 跑 migration。V2 再做编辑界面。
+默认字典在 `lib/db/seed-dictionary.ts`。运行中的字典存在 `label_dictionary`，可以通过 tag 管理页面新增、重命名、停用和调整 group。新增 tag 的 key 使用小写字母、数字和下划线，显示名可以用正常大小写。
 
 ---
 
@@ -251,8 +244,6 @@ evolved_into_range / evolved_into_channel / unclear
 
 未来用 NLP 从 YouTube 字幕生成候选标签时：
 - 候选写到和人工同一张 tag 表
-- 加列 `source TEXT NOT NULL DEFAULT 'human'`（`human` / `nlp:youtube`）
-- 加列 `confidence REAL`（仅 NLP）
+- 使用 `source` 区分人工、自动规则、NLP、导入和模型建议
+- 需要置信度时再为自动候选补充 `confidence`
 - 人工 tag 优先级高于 NLP，UI 标出来源
-
-V1 schema 现在**不**加 `source` 列（YAGNI），等 V2 真正接入时一次 migration 加。

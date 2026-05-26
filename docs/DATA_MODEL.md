@@ -1,8 +1,8 @@
 # Data Model
 
-SQLite 单文件，存放在 `./data/barwise.db`。所有表用 `INTEGER PRIMARY KEY`（即 rowid），时间戳统一存 **Unix epoch 秒（UTC）**，避免时区歧义。
+SQLite 单文件，存放在 `./data/barwise.db`。正式 schema 定义在 `lib/db/schema.sql`，默认标签字典定义在 `lib/db/seed-dictionary.ts`，由 `lib/db/ensure.ts` 在启动时确保存在。
 
-V1 采用 **tag-only 多 tag** 存储模式（M3 决定）。每个标注实体（bar / segment / context anchor）可挂多个 tag，每个 tag 一行。底层 field 不直接存储，由 [`LABEL_DICTIONARY.md`](./LABEL_DICTIONARY.md) 的 Tag→Field 映射表派生。
+所有表用 `INTEGER PRIMARY KEY`（即 rowid），时间戳统一存 **Unix epoch 秒（UTC）**，避免时区歧义。标注采用 **tag-only 多 tag** 存储模式：每个标注实体（bar / segment / context anchor / outcome range）可挂多个 tag，每个 tag 一行。底层 field 不直接存储，由 [`LABEL_DICTIONARY.md`](./LABEL_DICTIONARY.md) 的 Tag→Field 映射表派生。
 
 ---
 
@@ -13,12 +13,11 @@ instruments ──< sessions ──< bars
                                 │
                                 ├──< bar_tags       (per-bar; 多 tag)
                                 ├──< segment_tags   (per-range; 多 tag)
-                                └──< context_tags   (per-bar 锚点；多 tag)
+                                ├──< context_tags   (per-bar 锚点；多 tag)
+                                └──< outcome_tags   (per-range; 多 tag)
 
 label_dictionary  (独立表；tag key 的元数据：category, group, label, description, sort_order, is_active)
 ```
-
-V2 新增 `outcome_tags`，用于给已选择的 bar range 补打事后结果标签，并可指定确认 outcome 的 bar。
 
 ---
 
@@ -80,7 +79,7 @@ CREATE INDEX idx_bars_session ON bars(session_id, bar_number);
 
 ### `label_dictionary`
 
-Tag 的元数据。V2 起 `label_dictionary` 是可编辑的标签字典，不再只是 seed lookup。**没有 `field` 列**；底层 field 由 `field_mapping_json` derive。`group_name` 标记 tag 在 UI 上的分组归属（bar_shape / bar_pattern / segment / context_market / context_event / context_location / outcome_result）。
+Tag 的元数据。`label_dictionary` 是可编辑的标签字典。**没有 `field` 列**；底层 field 由 `field_mapping_json` derive。`group_name` 标记 tag 在 UI 上的分组归属（bar_shape / bar_pattern / segment / context_market / context_event / context_location / outcome_result）。
 
 ```sql
 CREATE TABLE label_dictionary (
@@ -205,18 +204,6 @@ CREATE INDEX idx_outcome_tags_confirm_bar ON outcome_tags(confirm_bar_id);
 CREATE INDEX idx_outcome_tags_key ON outcome_tags(tag_key);
 ```
 
-### `schema_migrations`
-
-```sql
-CREATE TABLE schema_migrations (
-  version     INTEGER PRIMARY KEY,
-  applied_at  INTEGER NOT NULL,
-  name        TEXT NOT NULL
-);
-```
-
----
-
 ## 查询模式
 
 | 查询 | 走的索引 |
@@ -244,56 +231,16 @@ V1 标注 UI 在 panel 底部显示一个聚合 note 视图（多 tag 的 note �
 
 ---
 
-## 字典演化
+## 字典维护
 
-参见 [`LABEL_DICTIONARY.md`](./LABEL_DICTIONARY.md) 的"字典演化（V1→V4）"。schema 角度：
+参见 [`LABEL_DICTIONARY.md`](./LABEL_DICTIONARY.md) 的完整标签定义。schema 角度：
 
 1. **加新条目**：INSERT，`is_active = 1`，立即可用
 2. **重命名 key**：事务内 `UPDATE label_dictionary SET key = ?` + 同步 `UPDATE bar_tags / segment_tags / context_tags / outcome_tags SET tag_key = ?`
 3. **停用**：`is_active = 0`，保留历史引用
-4. **删除**：不允许硬删除
+4. **删除**：只删除尚未使用、确认不再需要的混淆条目；已有历史引用的 tag 优先停用
 
 **为什么 tag_key 存字符串不存 dictionary_id？** 导出训练数据时不用 join 就有人类可读的 key。代价是重命名要级联更新，单用户量不大可接受。
-
----
-
-## 迁移
-
-文件：`lib/db/migrations/001_init.sql`、`002_*.sql`...
-
-启动时 `lib/db/migrate.ts`：
-
-```ts
-const current = db.prepare('SELECT COALESCE(MAX(version), 0) AS v FROM schema_migrations').get().v
-for (const file of sortedMigrationFiles) {
-  const version = parseInt(file.split('_')[0])
-  if (version > current) {
-    db.transaction(() => {
-      db.exec(readFileSync(file, 'utf8'))
-      db.prepare('INSERT INTO schema_migrations VALUES (?, ?, ?)').run(version, unixNow(), file)
-    })()
-  }
-}
-```
-
-### 计划：M3 → M4 之间的破坏性迁移 `002_tag_model.sql`
-
-旧 schema（`bar_labels` / `segment_labels` / `context_labels`，带 `UNIQUE(bar_id, field)`、`field` 列含义为 `bar_quality`/`bar_role`/`market_context`/...）**和新 tag 模型不兼容**。M2 期间打的标注是测试数据，可以一次性丢弃。
-
-`002_tag_model.sql` 步骤：
-
-1. `DROP TABLE bar_labels;`
-2. `DROP TABLE segment_labels;`
-3. `DROP TABLE context_labels;`
-4. `DELETE FROM label_dictionary;`（旧字段定义全部清空）
-5. `DROP INDEX` 任何旧 schema 的 idx_*
-6. `ALTER TABLE label_dictionary` 把 `field` 列改名 `group_name`（SQLite 3.25+ 支持 rename column；如果版本不支持就走"create new + copy + drop"）
-7. `CREATE TABLE bar_tags / segment_tags / context_tags`（如上）
-8. 重新 seed 新 dictionary（从 `LABEL_DICTIONARY.md`）
-
-**M4 实现前必须先跑完 002**，否则 schema 不匹配。
-
-**回滚：** 不写 down migration。备份就是 `cp data/barwise.db data/barwise.db.bak`。
 
 ---
 

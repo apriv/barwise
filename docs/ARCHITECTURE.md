@@ -25,8 +25,9 @@ barwise/
 ├── lib/                          # 服务端逻辑（不进客户端 bundle）
 │   ├── db/
 │   │   ├── client.ts             # better-sqlite3 单例
-│   │   ├── migrations/           # 顺序 SQL 文件 001_init.sql ...
-│   │   └── migrate.ts            # 启动时 apply
+│   │   ├── ensure.ts             # 启动时确保 schema + seed
+│   │   ├── schema.sql            # 正式 SQLite schema
+│   │   └── seed-dictionary.ts    # 默认标签字典
 │   ├── repo/                     # 数据访问层（一个表一个文件）
 │   │   ├── sessions.ts
 │   │   ├── bars.ts

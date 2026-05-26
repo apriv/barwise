@@ -79,7 +79,7 @@ RTH × 5min = 78 根/天。
 
 ## Export: JSONL（训练用）
 
-M2 只需要导出 bar labels。M3 会正式完善 JSONL schema，M4 再把 segment/context 加进去。
+JSONL 导出以 bar 为主行，附带当前 bar、context、segment 和 outcome tags。
 
 ### 文件：`barwise_export_<YYYYMMDD_HHMMSS>.jsonl`
 
@@ -94,28 +94,26 @@ M2 只需要导出 bar labels。M3 会正式完善 JSONL schema，M4 再把 segm
   "ts": 1710503400,
   "ohlc": { "open": 5230.25, "high": 5232.50, "low": 5229.75, "close": 5231.00, "volume": 12453 },
 
-  "bar_labels": {
-    "bar_quality": "strong_bull_bar",
-    "bar_role": "follow_through_bar"
-  },
+  "bar_tags": ["strong_bull_bar", "follow_through_bar"],
 
-  "context_labels": {},
-  "segments": []
+  "context_tags": [],
+  "segments": [],
+  "outcomes": []
 }
 ```
 
 **规则：**
-- `bar_labels` / `context_labels` 是 `{ field: value }` 扁平字典。
-- `segments` 是数组。
+- `bar_tags` / `context_tags` 是 tag key 数组。
+- `segments` / `outcomes` 是数组，包含 range、tag key 和 note。
 - field 没标就不出现该 key，不输出 `null` 占位。
 - 时间戳是 Unix epoch 秒（UTC）。
 - 所有 `value` 是字典里的英文 `key`，方便 ML pipeline 处理。
 
 ### 导出选项
 
-- V1 只导出 RTH
-- M2 默认只导出有 bar label 的 bar
-- M4 支持导出 bar / segment / context
+- 默认只导出 RTH
+- 可选择只导出有标签的 bar
+- 支持导出 bar / segment / context / outcome
 
 ---
 
