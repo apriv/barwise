@@ -9,9 +9,34 @@ interface TagSelectionPanelProps {
   items: LabelDictionaryItemWithUsage[];
 }
 
+function groupLabel(category: LabelCategory, groupName: string) {
+  return `${category} / ${groupName}`;
+}
+
 export function TagSelectionPanel({ items }: TagSelectionPanelProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
+  const rows = items.flatMap((item, index) => {
+    const previousItem = items[index - 1];
+    const startsGroup =
+      !previousItem ||
+      previousItem.category !== item.category ||
+      previousItem.group_name !== item.group_name;
+
+    return [
+      ...(startsGroup
+        ? [
+            {
+              kind: "group" as const,
+              id: `${item.category}:${item.group_name}`,
+              category: item.category,
+              groupName: item.group_name,
+            },
+          ]
+        : []),
+      { kind: "item" as const, item },
+    ];
+  });
 
   const toggleAll = useCallback(() => {
     if (selected.size === items.length) {
@@ -131,13 +156,28 @@ export function TagSelectionPanel({ items }: TagSelectionPanelProps) {
               <th className="px-4 py-3 font-medium">Tag</th>
               <th className="px-4 py-3 font-medium">Category</th>
               <th className="px-4 py-3 font-medium">Group</th>
+              <th className="px-4 py-3 text-right font-medium">Order</th>
               <th className="px-4 py-3 font-medium">Source</th>
               <th className="px-4 py-3 text-right font-medium">Usage</th>
               <th className="px-4 py-3 font-medium">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-            {items.map((item) => {
+            {rows.map((row) => {
+              if (row.kind === "group") {
+                return (
+                  <tr
+                    key={`group:${row.id}`}
+                    className="bg-zinc-50 text-xs uppercase text-zinc-500 dark:bg-zinc-900/70 dark:text-zinc-400"
+                  >
+                    <td colSpan={8} className="px-4 py-2 font-medium">
+                      {groupLabel(row.category, row.groupName)}
+                    </td>
+                  </tr>
+                );
+              }
+
+              const { item } = row;
               const id = `${item.category}:${item.key}`;
               const isChecked = selected.has(id);
               return (
@@ -170,6 +210,9 @@ export function TagSelectionPanel({ items }: TagSelectionPanelProps) {
                   <td className="px-4 py-3 font-mono text-xs text-zinc-600 dark:text-zinc-400">
                     {item.group_name}
                   </td>
+                  <td className="px-4 py-3 text-right font-mono text-zinc-700 dark:text-zinc-300">
+                    {item.sort_order}
+                  </td>
                   <td className="px-4 py-3 font-mono text-xs text-zinc-600 dark:text-zinc-400">
                     {item.source}
                   </td>
@@ -192,7 +235,7 @@ export function TagSelectionPanel({ items }: TagSelectionPanelProps) {
             })}
             {items.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-zinc-500">
+                <td colSpan={8} className="px-4 py-10 text-center text-zinc-500">
                   No tags match the current filters.
                 </td>
               </tr>

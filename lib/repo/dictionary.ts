@@ -84,6 +84,10 @@ export type UpsertDictionaryItemInput = {
   source?: LabelSource;
 };
 
+type DictionaryOrderRow = {
+  key: string;
+};
+
 function database(db?: Database) {
   return db ?? getDb();
 }
@@ -108,6 +112,105 @@ export function parseFieldMappingJson(value: string | null | undefined) {
 
 function assertValidFieldMappingJson(value: string | null | undefined) {
   parseFieldMappingJson(value);
+}
+
+function listDictionaryGroupOrder(
+  category: LabelCategory,
+  groupName: string,
+  db: Database,
+) {
+  return db
+    .prepare(
+      `
+      SELECT key
+      FROM label_dictionary
+      WHERE category = ?
+        AND group_name = ?
+      ORDER BY sort_order ASC, label ASC, key ASC
+    `,
+    )
+    .all(category, groupName) as DictionaryOrderRow[];
+}
+
+function normalizeRequestedPosition(
+  requestedPosition: number | undefined,
+  itemCount: number,
+) {
+  if (!requestedPosition || requestedPosition < 1) {
+    return itemCount;
+  }
+
+  return Math.min(requestedPosition, itemCount);
+}
+
+function rewriteDictionaryGroupOrder(
+  category: LabelCategory,
+  groupName: string,
+  db: Database,
+  now: number,
+  movingKey?: string,
+  requestedPosition?: number,
+) {
+  const rows = listDictionaryGroupOrder(category, groupName, db);
+
+  if (!movingKey) {
+    const updateSortOrder = db.prepare(
+      `
+      UPDATE label_dictionary
+      SET sort_order = ?,
+          updated_at = ?
+      WHERE category = ?
+        AND group_name = ?
+        AND key = ?
+    `,
+    );
+
+    rows.forEach((row, index) => {
+      updateSortOrder.run(index + 1, now, category, groupName, row.key);
+    });
+    return;
+  }
+
+  const movingRow = rows.find((row) => row.key === movingKey);
+  if (!movingRow) return;
+
+  const remainingRows = rows.filter((row) => row.key !== movingKey);
+  const targetPosition = normalizeRequestedPosition(
+    requestedPosition,
+    rows.length,
+  );
+  const insertIndex = targetPosition - 1;
+  const orderedRows = [
+    ...remainingRows.slice(0, insertIndex),
+    movingRow,
+    ...remainingRows.slice(insertIndex),
+  ];
+  const updateSortOrder = db.prepare(
+    `
+    UPDATE label_dictionary
+    SET sort_order = ?,
+        updated_at = ?
+    WHERE category = ?
+      AND group_name = ?
+      AND key = ?
+  `,
+  );
+
+  orderedRows.forEach((row, index) => {
+    updateSortOrder.run(index + 1, now, category, groupName, row.key);
+  });
+}
+
+export function getDictionaryItemPosition(
+  category: LabelCategory,
+  groupName: string,
+  key: string,
+  db?: Database,
+) {
+  const rows = listDictionaryGroupOrder(category, groupName, database(db));
+  const index = rows.findIndex((row) => row.key === key);
+
+  return index === -1 ? rows.length + 1 : index + 1;
 }
 
 export function listActiveDictionaryItems(
@@ -493,55 +596,84 @@ export function upsertDictionaryItem(
 ) {
   const now = unixNow();
   const fieldMappingJson = input.fieldMappingJson?.trim() || "{}";
+  const targetDb = database(db);
 
   assertValidFieldMappingJson(fieldMappingJson);
 
-  database(db)
-    .prepare(
-      `
-      INSERT INTO label_dictionary (
-        category,
-        group_name,
-        key,
-        label,
-        description,
-        example,
-        field_mapping_json,
-        sort_order,
-        is_active,
-        created_by,
-        source,
-        created_at,
-        updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT (category, key) DO UPDATE SET
-        group_name = excluded.group_name,
-        label = excluded.label,
-        description = excluded.description,
-        example = excluded.example,
-        field_mapping_json = excluded.field_mapping_json,
-        sort_order = excluded.sort_order,
-        is_active = excluded.is_active,
-        created_by = excluded.created_by,
-        source = excluded.source,
-        updated_at = excluded.updated_at
-    `,
-    )
-    .run(
-      input.category,
-      input.groupName,
-      input.key,
-      input.label,
-      input.description ?? null,
-      input.example ?? null,
-      fieldMappingJson,
-      input.sortOrder ?? 0,
-      input.isActive === false ? 0 : 1,
-      input.createdBy ?? "local",
-      input.source ?? "manual",
-      now,
-      now,
-    );
+  targetDb
+    .transaction(() => {
+      const existing = getDictionaryItem(input.category, input.key, targetDb);
+      const previousGroupName = existing?.group_name;
+      const targetPosition =
+        input.sortOrder ??
+        (existing && previousGroupName === input.groupName
+          ? existing.sort_order
+          : Number.MAX_SAFE_INTEGER);
+
+      targetDb
+        .prepare(
+          `
+          INSERT INTO label_dictionary (
+            category,
+            group_name,
+            key,
+            label,
+            description,
+            example,
+            field_mapping_json,
+            sort_order,
+            is_active,
+            created_by,
+            source,
+            created_at,
+            updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT (category, key) DO UPDATE SET
+            group_name = excluded.group_name,
+            label = excluded.label,
+            description = excluded.description,
+            example = excluded.example,
+            field_mapping_json = excluded.field_mapping_json,
+            is_active = excluded.is_active,
+            created_by = excluded.created_by,
+            source = excluded.source,
+            updated_at = excluded.updated_at
+        `,
+        )
+        .run(
+          input.category,
+          input.groupName,
+          input.key,
+          input.label,
+          input.description ?? null,
+          input.example ?? null,
+          fieldMappingJson,
+          0,
+          input.isActive === false ? 0 : 1,
+          input.createdBy ?? "local",
+          input.source ?? "manual",
+          now,
+          now,
+        );
+
+      if (previousGroupName && previousGroupName !== input.groupName) {
+        rewriteDictionaryGroupOrder(
+          input.category,
+          previousGroupName,
+          targetDb,
+          now,
+        );
+      }
+
+      rewriteDictionaryGroupOrder(
+        input.category,
+        input.groupName,
+        targetDb,
+        now,
+        input.key,
+        targetPosition,
+      );
+    })();
 }
 
 export function setDictionaryItemActive(

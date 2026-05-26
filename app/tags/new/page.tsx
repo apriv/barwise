@@ -154,12 +154,14 @@ export default async function NewTagPage({
           </label>
           <label className="space-y-1 text-sm">
             <span className="text-xs font-medium uppercase text-zinc-500">
-              Sort order
+              Marking page position
             </span>
             <input
               name="sortOrder"
               type="number"
-              defaultValue={0}
+              min={1}
+              placeholder="Last"
+              title="Use 1 for the top of the current group. Large numbers are moved to the end."
               className="w-full rounded border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950"
             />
           </label>

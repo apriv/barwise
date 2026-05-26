@@ -46,23 +46,33 @@ export default async function TagsPage({
       ? selectedSource
       : "";
 
-  const items = listDictionaryItemsWithUsage(category).filter((item) => {
-    if (selectedStatus === "active" && !item.is_active) return false;
-    if (selectedStatus === "inactive" && item.is_active) return false;
-    if (source && item.source !== source) return false;
-    if (!q) return true;
+  const items = listDictionaryItemsWithUsage(category)
+    .filter((item) => {
+      if (selectedStatus === "active" && !item.is_active) return false;
+      if (selectedStatus === "inactive" && item.is_active) return false;
+      if (source && item.source !== source) return false;
+      if (!q) return true;
 
-    const haystack = [
-      item.key,
-      item.label,
-      item.group_name,
-      item.description ?? "",
-    ]
-      .join(" ")
-      .toLowerCase();
+      const haystack = [
+        item.key,
+        item.label,
+        item.group_name,
+        item.description ?? "",
+      ]
+        .join(" ")
+        .toLowerCase();
 
-    return haystack.includes(q);
-  });
+      return haystack.includes(q);
+    })
+    .toSorted((a, b) => {
+      if (a.category !== b.category) {
+        return a.category.localeCompare(b.category);
+      }
+      if (a.group_name !== b.group_name) {
+        return a.group_name.localeCompare(b.group_name);
+      }
+      return a.sort_order - b.sort_order || a.label.localeCompare(b.label);
+    });
 
   const newTagHref = category ? `/tags/new?category=${category}` : "/tags/new";
   const dashboardHref = category

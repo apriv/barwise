@@ -333,6 +333,8 @@ source
 - [ ] outcome marker
 - [x] 不要每次改变tag顺序
 - 快捷键 1long entry 2short entry, 
+- 修改和新增tag保存后，跳转到tag列表
+- 新增tag的时候有json，不明白什么意思
 
 
 ### 验收

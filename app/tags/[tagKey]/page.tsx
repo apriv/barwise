@@ -13,6 +13,7 @@ import type { LabelCategory, LabelSource } from "@/lib/repo/dictionary";
 import {
   getDictionaryItem,
   getDictionaryItemByKey,
+  getDictionaryItemPosition,
   listDictionaryGroups,
   listDictionaryItemsWithUsage,
   listRecentUsageForTag,
@@ -79,6 +80,11 @@ export default async function TagDetailPage({
     )?.usage_count ?? 0;
   const recentUsage = listRecentUsageForTag(item.category, item.key);
   const groups = listDictionaryGroups(item.category);
+  const markingPagePosition = getDictionaryItemPosition(
+    item.category,
+    item.group_name,
+    item.key,
+  );
 
   return (
     <main className="flex flex-1 justify-center px-6 py-8">
@@ -175,11 +181,13 @@ export default async function TagDetailPage({
           </div>
           <GroupField defaultValue={item.group_name} groups={groups} />
           <label className="space-y-1 text-sm">
-            <span className="text-xs font-medium uppercase text-zinc-500">Sort order</span>
+            <span className="text-xs font-medium uppercase text-zinc-500">Marking page position</span>
             <input
               name="sortOrder"
               type="number"
-              defaultValue={item.sort_order}
+              min={1}
+              defaultValue={markingPagePosition}
+              title="Use 1 for the top of the current group. Large numbers are moved to the end."
               className="w-full rounded border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950"
             />
           </label>
