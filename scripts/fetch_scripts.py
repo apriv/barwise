@@ -29,8 +29,8 @@ CHANNEL_URL = "https://www.youtube.com/@BrooksTradingCourse/videos"
 OUT_DIR = Path(__file__).resolve().parent.parent / "data" / "youtube_subtitles" / "brooks_trading_course"
 
 MONTH_RE = (
-    r"January|February|March|April|May|June|July|August|"
-    r"September|October|November|December"
+    r"January|Jan|February|Feb|March|Mar|April|Apr|May|June|Jun|July|Jul|August|Aug|"
+    r"September|Sep|Sept|October|Oct|November|Nov|December|Dec"
 )
 SP500_RE = re.compile(
     r"\bs\s*&?\s*p\s*500\b|\bs&p500\b|\bsp\s*500\b|\bs\s*&?\s*p\s+e\s*[- ]?\s*mini\s+500\b",
