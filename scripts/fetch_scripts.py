@@ -90,7 +90,7 @@ def title_filter(info: dict[str, Any], *, incomplete: bool) -> str | None:
 def build_options(args: argparse.Namespace) -> dict[str, Any]:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    return {
+    options: dict[str, Any] = {
         "skip_download": True,
         "writesubtitles": True,
         "writeautomaticsub": args.write_auto_sub,
@@ -99,8 +99,6 @@ def build_options(args: argparse.Namespace) -> dict[str, Any]:
         "ignoreerrors": True,
         "continuedl": True,
         "noplaylist": False,
-        "playliststart": args.start,
-        "playlistend": args.limit,
         "overwrites": False,
         "match_filter": title_filter,
         "download_archive": str(OUT_DIR / "downloaded.txt"),
@@ -113,6 +111,11 @@ def build_options(args: argparse.Namespace) -> dict[str, Any]:
             ),
         },
     }
+    if args.start is not None:
+        options["playliststart"] = args.start
+    if args.limit is not None:
+        options["playlistend"] = args.limit
+    return options
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -175,9 +178,11 @@ def list_matches(args: argparse.Namespace) -> int:
         "extract_flat": "in_playlist",
         "ignoreerrors": True,
         "quiet": True,
-        "playliststart": args.start,
-        "playlistend": args.limit,
     }
+    if args.start is not None:
+        ydl_opts["playliststart"] = args.start
+    if args.limit is not None:
+        ydl_opts["playlistend"] = args.limit
     with YoutubeDL(ydl_opts) as ydl:
         playlist = ydl.extract_info(args.url, download=False)
 
