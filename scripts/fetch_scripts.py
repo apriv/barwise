@@ -27,13 +27,14 @@ from yt_dlp import YoutubeDL
 
 CHANNEL_URL = "https://www.youtube.com/@BrooksTradingCourse/videos"
 OUT_DIR = Path(__file__).resolve().parent.parent / "data" / "youtube_subtitles" / "brooks_trading_course"
+DEFAULT_YEAR = "2026"
 
 MONTH_RE = (
     r"January|Jan|February|Feb|March|Mar|April|Apr|May|June|Jun|July|Jul|August|Aug|"
     r"September|Sep|Sept|October|Oct|November|Nov|December|Dec"
 )
 SP500_RE = re.compile(
-    r"\bs\s*&?\s*p\s*500\b|\bs&p500\b|\bsp\s*500\b|\bs\s*&?\s*p\s+e\s*[- ]?\s*mini\s+500\b",
+    r"\bs\s*&?\s*p\s*500\b|\bs&p500\b|\bsp\s*500\b|\bsp50\b|\bs\s*&?\s*p\s+e\s*[- ]?\s*mini\s+500\b",
     re.IGNORECASE,
 )
 EMINI_RE = re.compile(r"\be\s*[- ]?\s*mini\b", re.IGNORECASE)
@@ -43,11 +44,30 @@ DATE_RE = re.compile(
 )
 
 
-def is_sp500_emini_daily_review(title: str | None) -> bool:
-    """Return True for Brooks titles that appear to be ES daily reviews."""
+def is_sp500_emini_title(title: str | None) -> bool:
+    """Return True for Brooks titles that appear to discuss ES/SP500 E-mini."""
     if not title:
         return False
-    return bool(SP500_RE.search(title) and EMINI_RE.search(title) and DATE_RE.search(title))
+    return bool(SP500_RE.search(title) and EMINI_RE.search(title))
+
+
+def title_has_year_date(title: str | None, year: str) -> bool:
+    if not title:
+        return False
+    match = DATE_RE.search(title)
+    return bool(match and year in match.group(0))
+
+
+def is_target_year(info: dict[str, Any], year: str) -> bool:
+    upload_date = info.get("upload_date") or ""
+    if isinstance(upload_date, str) and upload_date.startswith(year):
+        return True
+    return title_has_year_date(info.get("title"), year)
+
+
+def is_sp500_emini_daily_review(info: dict[str, Any], year: str) -> bool:
+    """Return True for Brooks ES review videos in the target year."""
+    return is_sp500_emini_title(info.get("title")) and is_target_year(info, year)
 
 
 def title_filter(info: dict[str, Any], *, incomplete: bool) -> str | None:
@@ -59,9 +79,12 @@ def title_filter(info: dict[str, Any], *, incomplete: bool) -> str | None:
     if title is None:
         return None
 
-    if is_sp500_emini_daily_review(title):
+    if incomplete and is_sp500_emini_title(title):
         return None
-    return f"not an S&P500 E-mini dated daily review: {title!r}"
+
+    if is_sp500_emini_daily_review(info, DEFAULT_YEAR):
+        return None
+    return f"not a {DEFAULT_YEAR} S&P500 E-mini daily review: {title!r}"
 
 
 def build_options(args: argparse.Namespace) -> dict[str, Any]:
@@ -82,7 +105,12 @@ def build_options(args: argparse.Namespace) -> dict[str, Any]:
         "match_filter": title_filter,
         "download_archive": str(OUT_DIR / "downloaded.txt"),
         "outtmpl": {
-            "default": str(OUT_DIR / "%(upload_date)s - %(title).180B [%(id)s].%(ext)s"),
+            "default": str(
+                OUT_DIR
+                / "%(upload_date>%Y)s"
+                / "%(upload_date>%Y-%m)s"
+                / "%(upload_date)s - %(title).180B [%(id)s].%(ext)s"
+            ),
         },
     }
 
@@ -154,7 +182,11 @@ def list_matches(args: argparse.Namespace) -> int:
         playlist = ydl.extract_info(args.url, download=False)
 
     entries = playlist.get("entries", []) if playlist else []
-    matches = [entry for entry in entries if is_sp500_emini_daily_review(entry.get("title"))]
+    matches = [
+        entry
+        for entry in entries
+        if is_sp500_emini_title(entry.get("title")) and title_has_year_date(entry.get("title"), DEFAULT_YEAR)
+    ]
     for entry in matches:
         video_id = entry.get("id", "")
         title = entry.get("title", "")
@@ -171,7 +203,7 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"Scanning: {args.url}")
     print(f"Saving subtitles to: {OUT_DIR}")
-    print("Filter: title contains S&P500/S&P 500, E-mini/E mini, and a Month D, YYYY date")
+    print(f"Filter: S&P500/S&P 500 + E-mini/E mini, uploaded in {DEFAULT_YEAR} or dated {DEFAULT_YEAR} in title")
 
     with YoutubeDL(build_options(args)) as ydl:
         result = ydl.download([args.url])
