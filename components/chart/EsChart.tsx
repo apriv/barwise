@@ -7,6 +7,11 @@ import {
   type IChartApi,
   type UTCTimestamp,
 } from "lightweight-charts";
+
+import {
+  formatPacificChartTime,
+  formatPacificTickMark,
+} from "@/components/chart/time-format";
 import type { Candle } from "@/lib/sample-data";
 
 export function EsChart({ candles }: { candles: Candle[] }) {
@@ -29,6 +34,10 @@ export function EsChart({ candles }: { candles: Candle[] }) {
         timeVisible: true,
         secondsVisible: false,
         borderColor: "#27272a",
+        tickMarkFormatter: formatPacificTickMark,
+      },
+      localization: {
+        timeFormatter: formatPacificChartTime,
       },
       rightPriceScale: { borderColor: "#27272a" },
       autoSize: true,

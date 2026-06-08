@@ -17,6 +17,11 @@ import {
   type UTCTimestamp,
 } from "lightweight-charts";
 
+import {
+  formatPacificChartTime,
+  formatPacificTickMark,
+} from "@/components/chart/time-format";
+
 export type ChartBar = {
   id: number;
   barNumber: number;
@@ -359,6 +364,10 @@ export function Chart({
         timeVisible: true,
         secondsVisible: false,
         borderColor: "#d4d4d8",
+        tickMarkFormatter: formatPacificTickMark,
+      },
+      localization: {
+        timeFormatter: formatPacificChartTime,
       },
       rightPriceScale: { borderColor: "#d4d4d8" },
       crosshair: {
