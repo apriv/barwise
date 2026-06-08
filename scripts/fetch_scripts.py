@@ -32,7 +32,10 @@ MONTH_RE = (
     r"January|February|March|April|May|June|July|August|"
     r"September|October|November|December"
 )
-SP500_RE = re.compile(r"\bs\s*&\s*p\s*500\b|\bs&p500\b", re.IGNORECASE)
+SP500_RE = re.compile(
+    r"\bs\s*&?\s*p\s*500\b|\bs&p500\b|\bsp\s*500\b|\bs\s*&?\s*p\s+e\s*[- ]?\s*mini\s+500\b",
+    re.IGNORECASE,
+)
 EMINI_RE = re.compile(r"\be\s*[- ]?\s*mini\b", re.IGNORECASE)
 DATE_RE = re.compile(rf"\b(?:{MONTH_RE})\s+\d{{1,2}},\s+\d{{4}}\b", re.IGNORECASE)
 
@@ -70,7 +73,9 @@ def build_options(args: argparse.Namespace) -> dict[str, Any]:
         "ignoreerrors": True,
         "continuedl": True,
         "noplaylist": False,
+        "playliststart": args.start,
         "playlistend": args.limit,
+        "overwrites": False,
         "match_filter": title_filter,
         "download_archive": str(OUT_DIR / "downloaded.txt"),
         "outtmpl": {
@@ -110,6 +115,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         help="Only scan the first N videos from the channel/playlist.",
     )
     parser.add_argument(
+        "--start",
+        type=int,
+        default=None,
+        help="Start scanning at this 1-based playlist index.",
+    )
+    parser.add_argument(
         "--no-auto-sub",
         dest="write_auto_sub",
         action="store_false",
@@ -133,6 +144,7 @@ def list_matches(args: argparse.Namespace) -> int:
         "extract_flat": "in_playlist",
         "ignoreerrors": True,
         "quiet": True,
+        "playliststart": args.start,
         "playlistend": args.limit,
     }
     with YoutubeDL(ydl_opts) as ydl:
