@@ -37,7 +37,10 @@ SP500_RE = re.compile(
     re.IGNORECASE,
 )
 EMINI_RE = re.compile(r"\be\s*[- ]?\s*mini\b", re.IGNORECASE)
-DATE_RE = re.compile(rf"\b(?:{MONTH_RE})\s+\d{{1,2}},\s+\d{{4}}\b", re.IGNORECASE)
+DATE_RE = re.compile(
+    rf"\b(?:{MONTH_RE})\s+\d{{1,2}},?\s+\d{{4}}\b|\b\d{{1,2}}\s+(?:{MONTH_RE})\s+\d{{4}}\b",
+    re.IGNORECASE,
+)
 
 
 def is_sp500_emini_daily_review(title: str | None) -> bool:
