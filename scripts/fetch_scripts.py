@@ -46,7 +46,13 @@ def is_sp500_emini_daily_review(title: str | None) -> bool:
 
 def title_filter(info: dict[str, Any], *, incomplete: bool) -> str | None:
     """yt-dlp match_filter: return a reason string to reject an entry."""
+    if info.get("_type") in {"playlist", "multi_video"} or "entries" in info:
+        return None
+
     title = info.get("title")
+    if title is None:
+        return None
+
     if is_sp500_emini_daily_review(title):
         return None
     return f"not an S&P500 E-mini dated daily review: {title!r}"
